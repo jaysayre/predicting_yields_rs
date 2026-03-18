@@ -1,0 +1,7 @@
+*.md
+__pycache__/
+*.pyc
+.claude/
+.ipynb_checkpoints/
+*.docx
+*.sps
