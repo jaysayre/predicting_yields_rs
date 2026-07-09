@@ -32,6 +32,12 @@ CROP        =  'Maize'
 SEASON      =  'Spring-Summer'
 MIN_YEAR    =  2017
 MAX_YEAR    =  2022
+# CIMMYT yields are self-reported and contain evident data-entry errors
+# (values up to 16,600 t/ha). Restrict to a plausible agronomic range before
+# computing any accuracy metric; ~2-3% of matched plots fall outside it.
+CLEAN_LO    =  0.3     # t/ha, lower plausible maize yield
+CLEAN_HI    =  20.0    # t/ha, upper plausible maize yield
+N_BOOT      =  500     # municipality-cluster bootstrap replications for CIs
 # ============================================================
 
 
@@ -103,6 +109,28 @@ def spearman_corr(y, yh):
     if len(y) < 5:
         return np.nan
     return stats.spearmanr(y, yh).statistic
+
+def boot_ci_within(df, ycol, pcol, gc='muncode', B=500, seed=42):
+    """Municipality-cluster bootstrap 95% CI for within-group R2.
+
+    Resamples whole municipalities (clusters) with replacement, so the CI
+    reflects the effective number of municipalities, not plot-years.
+    """
+    sub = df[[ycol, pcol, gc]].replace([np.inf, -np.inf], np.nan).dropna()
+    groups = {g: d for g, d in sub.groupby(gc)}
+    keys = np.array(list(groups.keys()))
+    rng = np.random.default_rng(seed)
+    vals = []
+    for _ in range(B):
+        pick = rng.choice(keys, len(keys), replace=True)
+        bs = pd.concat([groups[k] for k in pick], ignore_index=True)
+        v = within_r2(bs, ycol, pcol, gc)
+        if np.isfinite(v):
+            vals.append(v)
+    if not vals:
+        return (np.nan, np.nan)
+    return (float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5)))
+
 
 def eval_group(df, label, ycol='yield_cimmyt', pcol='pred', gc='muncode'):
     sub = df[[ycol, pcol, gc]].replace([np.inf, -np.inf], np.nan).dropna()
@@ -253,14 +281,26 @@ cimmyt_yields = pd.read_excel(
     os.path.join(cimmyt_dir, "Farmer_plots",
                  "2.-Sowing_harvest_yields_2012-2022_02.xlsx")
 )
-cy = cimmyt_yields[
+_n_pre_clean = (
     (cimmyt_yields['CROP'] == 'MAIZE')
     & (cimmyt_yields['PRODUCT.OBTAINED'] == 'GRAIN')
     & (cimmyt_yields['YEAR'] >= MIN_YEAR)
     & (cimmyt_yields['YEAR'] <= MAX_YEAR)
     & (cimmyt_yields['ACTUAL.YIELD.(UNIT/HA)'].notna())
     & (cimmyt_yields['ACTUAL.YIELD.(UNIT/HA)'] > 0)
+).sum()
+cy = cimmyt_yields[
+    (cimmyt_yields['CROP'] == 'MAIZE')
+    & (cimmyt_yields['PRODUCT.OBTAINED'] == 'GRAIN')
+    & (cimmyt_yields['YEAR'] >= MIN_YEAR)
+    & (cimmyt_yields['YEAR'] <= MAX_YEAR)
+    & (cimmyt_yields['ACTUAL.YIELD.(UNIT/HA)'].notna())
+    & (cimmyt_yields['ACTUAL.YIELD.(UNIT/HA)'] >= CLEAN_LO)
+    & (cimmyt_yields['ACTUAL.YIELD.(UNIT/HA)'] <= CLEAN_HI)
 ].copy()
+print(f"  CIMMYT maize-grain rows: {_n_pre_clean:,} raw -> {len(cy):,} after "
+      f"restricting yields to [{CLEAN_LO}, {CLEAN_HI}] t/ha "
+      f"({100*(1-len(cy)/_n_pre_clean):.1f}% dropped as implausible)")
 cy = cy.rename(columns={
     'PLOT.ID': 'plot_id',
     'YEAR': 'year',
@@ -608,5 +648,97 @@ if len(has_siap2) > 100:
               f"AvgY={sub['yield_cimmyt'].mean():.2f}, "
               f"AvgP={sub['pred'].mean():.2f}")
 
+
+# ============================================================
+# 7. WRITE PAPER TABLE (tab:cimmyt_profile)
+# ============================================================
+# Collapsed, honest two-panel table:
+#   Panel A  Plot-level accuracy: ensemble vs a naive SIAP-municipal-mean
+#            baseline (zero within-mun skill by construction). The gap in
+#            within-R2 is the model's marginal plot-level skill beyond the
+#            municipal anchor. A cluster-bootstrap CI is attached to it.
+#   Panel B  Municipal-level aggregation (pred vs SIAP, CIMMYT vs SIAP).
+# Ratio-stratified panels are intentionally excluded: they condition on the
+# ground truth (ratio = yield_cimmyt/yield_siap) and their subset R2 is
+# largely mechanical rather than evidence of model skill.
+print(f"\n{'='*110}")
+print("WRITING PAPER TABLE (tab:cimmyt_profile)")
+print(f"{'='*110}")
+
+_tbl = df.dropna(subset=['yield_siap']).copy()
+
+def _fmt(x, d=3):
+    if not np.isfinite(x):
+        return "---"
+    return f"{x:.{d}f}".replace("-", "$-$")
+
+# Panel A rows
+_ens = eval_group(_tbl, 'AEF Hist Ensemble', ycol='yield_cimmyt', pcol='pred')
+_base = eval_group(_tbl, 'SIAP mun-mean (naive baseline)',
+                   ycol='yield_cimmyt', pcol='yield_siap')
+_wtn_lo, _wtn_hi = boot_ci_within(_tbl, 'yield_cimmyt', 'pred', B=N_BOOT)
+
+# Panel B: municipal-level aggregation
+_mun = _tbl.groupby(['muncode', 'year']).agg(
+    mean_pred=('pred', 'mean'),
+    mean_cimmyt=('yield_cimmyt', 'mean'),
+    yield_siap=('yield_siap', 'first'),
+).reset_index()
+_r2_ps = r2(_mun['yield_siap'].values, _mun['mean_pred'].values)
+_r_ps = np.corrcoef(_mun['mean_pred'].values, _mun['yield_siap'].values)[0, 1]
+_r_cs = np.corrcoef(_mun['mean_cimmyt'].values, _mun['yield_siap'].values)[0, 1]
+
+_drop_pct = 100 * (1 - len(cy) / _n_pre_clean)
+
+_tex = r"""\begin{table}[!ht]
+\centering
+\caption{AEF Hist Ensemble predictions evaluated against CIMMYT plot-level maize yields, 2017--2022} \label{tab:cimmyt_profile}
+\footnotesize
+\begin{tabular}{lrrrrrr}
+\toprule
+& $N$ & $R^2$ & Btw-$R^2$ & Wtn-$R^2$ & Pearson & Spearman \\
+\midrule
+\multicolumn{7}{l}{\textit{Panel A: Plot-level accuracy}} \\
+"""
+_tex += (f"AEF Hist Ensemble & {_ens['N']:,} & {_fmt(_ens['R2'])} & "
+         f"{_fmt(_ens['Btw'])} & {_fmt(_ens['Wtn'])} & {_fmt(_ens['Pearson'])} & "
+         f"{_fmt(_ens['Spearman'])} \\\\\n")
+_tex += (f"SIAP mun-mean (naive baseline) & {_base['N']:,} & {_fmt(_base['R2'])} & "
+         f"{_fmt(_base['Btw'])} & {_fmt(_base['Wtn'])} & {_fmt(_base['Pearson'])} & "
+         f"{_fmt(_base['Spearman'])} \\\\\n")
+_tex += r"""\addlinespace
+\multicolumn{7}{l}{\textit{Panel B: Municipal-level aggregation}} \\
+"""
+_tex += (f"Pred vs SIAP (mun-level) & {len(_mun):,} & {_fmt(_r2_ps)} & --- & --- & "
+         f"{_fmt(_r_ps)} & --- \\\\\n")
+_tex += (f"CIMMYT vs SIAP (mun-level) & {len(_mun):,} & --- & --- & --- & "
+         f"{_fmt(_r_cs)} & --- \\\\\n")
+_tex += r"""\bottomrule
+\end{tabular}
+\par\smallskip
+\footnotesize{Notes: AEF Hist Ensemble trained on SIAP municipality-level maize yields (Spring--Summer, """
+_tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to CIMMYT plot-level AEF features "
+         r"extracted at 10\,m resolution. CIMMYT yields are self-reported from managed "
+         r"farmer trial plots; observations outside a plausible "
+         f"{CLEAN_LO}--{CLEAN_HI}"
+         r"\,t/ha range ($\approx$"
+         f"{_drop_pct:.1f}"
+         r"\% of matched plots, reflecting evident data-entry errors up to 16{,}600\,t/ha) "
+         r"are excluded. Between- and within-$R^2$ use municipality groupings. The naive "
+         r"baseline assigns every plot its SIAP municipal mean and therefore has zero "
+         r"within-municipality skill by construction; the ensemble's within-$R^2 = "
+         f"{_ens['Wtn']:.3f}"
+         r"$ (95\% CI ["
+         f"{_wtn_lo:.3f}, {_wtn_hi:.3f}"
+         r"], municipality-cluster bootstrap) is the model's marginal plot-level skill "
+         r"beyond the municipal anchor. Panel B compares municipality-level means.}"
+         "\n\\end{table}\n")
+
+for _dest in [os.path.join(table_dir, "accuracy_cimmyt_profile.tex"),
+              os.path.join(overleaf, "accuracy_cimmyt_profile.tex")]:
+    os.makedirs(os.path.dirname(_dest), exist_ok=True)
+    with open(_dest, 'w') as _f:
+        _f.write(_tex)
+    print(f"  wrote {_dest}")
 
 print(f"\nRuntime: {(time.time()-t0)/60:.1f} min")
