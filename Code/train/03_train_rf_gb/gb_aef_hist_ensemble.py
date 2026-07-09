@@ -259,14 +259,23 @@ gt = gt.merge(gt_pv, on=['adc', 'muncode'], how='left')
 # ── 7. Merge predictions with GT ────────────────────────
 df = gt.merge(adc_combo[['adc', 'pred']], on='adc', how='left')
 
+# Ex-ante area proxy for the correction weight: agricultural-land area, NOT
+# the census planted area (land_input), which would not be available ex-ante.
+agland = pd.read_csv(os.path.join(proj_dir, "Data", "SIAP_agland", "Output",
+                                  "2007_adcs_agland_area.csv"))
+agland['adc'] = agland['adc07'].astype(str).str.replace('-', '', regex=False)
+df = df.merge(agland[['adc', 'siap_agland_area']], on='adc', how='left')
+df['corr_w'] = np.where(df['siap_agland_area'] > 0, df['siap_agland_area'],
+                        df['land_input'])
+
 
 # ── 8. Additive ex-post correction ──────────────────────
-print("\nApplying additive correction...")
+print("\nApplying additive correction (ex-ante ag-land weights)...")
 
-# Area-weighted mun mean of predictions
-df['wQ'] = df['pred'] * df['land_input']
+# Area-weighted mun mean of predictions (ex-ante ag-land proxy weights)
+df['wQ'] = df['pred'] * df['corr_w']
 df['wA'] = df.apply(
-    lambda x: x['land_input'] if np.isfinite(x['pred']) else 0, axis=1
+    lambda x: x['corr_w'] if np.isfinite(x['pred']) else 0, axis=1
 )
 mun_agg = df.groupby('muncode').agg({'wQ': 'sum', 'wA': 'sum'}).reset_index()
 mun_agg['pred_mun_avg'] = mun_agg['wQ'] / mun_agg['wA']
@@ -288,6 +297,22 @@ mun_agg['diff'] = mun_agg['pred_mun_avg'] - mun_agg['yield_siap']
 df = df.merge(mun_agg[['muncode', 'diff']], on='muncode', how='left')
 df['pred_corr'] = (df['pred'] - df['diff']).clip(lower=0)
 df.loc[df['pred'].isna(), 'pred_corr'] = np.nan
+
+
+# ── 8b. Save predictions ────────────────────────────────
+print("\nSaving predictions ...")
+adc_out  =  adc_combo[['adcid', 'year', 'pred']].copy()
+adc_out['muncode']  =  adc_out['adcid'].str[:5]
+out_path  =  os.path.join(pred_dir, "adc_aef_hist_ens_preds.parquet")
+adc_out[['adcid', 'muncode', 'year', 'pred']].to_parquet(out_path, index=False)
+print(f"  {out_path}  ({len(adc_out):,} rows)")
+
+# Also save the GT-merged frame with correction (one row per INEGI maize UP)
+df_out  =  df[['adc', 'muncode', 'land_input', 'yield', 'yield_pv',
+                 'pred', 'pred_corr']].copy()
+out_eval_path  =  os.path.join(pred_dir, "adc_aef_hist_ens_eval.parquet")
+df_out.to_parquet(out_eval_path, index=False)
+print(f"  {out_eval_path}  ({len(df_out):,} rows)")
 
 
 # ── 9. Evaluate ─────────────────────────────────────────

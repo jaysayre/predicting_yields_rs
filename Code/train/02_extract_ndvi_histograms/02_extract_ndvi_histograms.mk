@@ -7,6 +7,7 @@ TASK_DIR := $(CODE_DIR)/train/02_extract_ndvi_histograms
 
 .PHONY: extract_histograms extract_monthly_histograms \
        prepare_adc_geometries \
+       extract_band_histograms_muni extract_band_histograms_adc \
        extract_3period_histograms_muni extract_3period_histograms_adc \
        clean_3period_histograms_muni clean_3period_histograms_adc
 
@@ -28,6 +29,22 @@ extract_monthly_histograms:
 	@echo ""
 	@echo "After GEE exports complete, download from Drive and run:"
 	@echo "  python clean_monthly_histograms.py Data/muni_monthly_hists_32bins_8mo Data/monthly_hists_clean 32 8"
+
+# ── NIR/RED band 2D histograms (Stage 3: preserve absolute reflectance) ──
+# 5 paired 2D histograms (NDVI, NIR, RED trajectories + early/late spectral
+# space). Aim: lift RAW (uncorrected) histogram performance vs the NDVI-only
+# 3-period model. Pipeline mirrors the 3-period one.
+extract_band_histograms_muni:
+	@echo "MANUAL STEP: Run ls_band_hists.py interactively"
+	@echo "  Requires: Earth Engine auth + ML_env"
+	@echo "  Args:     muni 32"
+	@echo "  Output:   GDrive → muni_band_hists_32bins/"
+	@echo "  Then: clean (adapt clean_3period_histograms.py for 5 hist cols) +"
+	@echo "        train (adapt gb_3period_prediction.py -> gb_band_hist_prediction.py)"
+
+extract_band_histograms_adc:
+	@echo "MANUAL STEP: Run ls_band_hists.py interactively  (Args: adc 32)"
+	@echo "  Output:   GDrive → adc_band_hists_32bins/"
 
 # ── 3-period 2D histograms ───────────────────────────────
 

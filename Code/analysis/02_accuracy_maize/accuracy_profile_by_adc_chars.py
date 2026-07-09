@@ -286,15 +286,36 @@ def profile_by(df, char_col, char_label, n_groups=3):
     except ValueError:
         return []
 
+    # Map the surviving (deduplicated) bins back onto the correct tercile names:
+    # the lowest group is the Bottom tercile, the highest the Top tercile, so that
+    # a collapsed middle edge never mislabels the upper third as "Middle".
+    n_grp = int(sub['_grp'].max()) + 1
+    pos = {0: 0} if n_grp == 1 else {g: round(g * (len(labels) - 1) / (n_grp - 1)) for g in range(n_grp)}
+
     results = []
-    for g in range(sub['_grp'].max() + 1):
+    for g in range(n_grp):
         grp_df = sub[sub['_grp'] == g]
         lo = grp_df[char_col].min()
         hi = grp_df[char_col].max()
-        lbl = f"{char_label}: {labels[g]} [{lo:.2f}-{hi:.2f}]"
+        lbl = f"{char_label}: {labels[pos[g]]} [{lo:.2f}-{hi:.2f}]"
         row = eval_subsample(grp_df, 'yield', 'pred', lbl)
         results.append(row)
         print(f"  {row['label']:<55s} {row['N']:>8,} {row['R2']:>6.3f} {row['Btw']:>6.3f} {row['Wtn']:>7.3f} {row['RMSE']:>6.3f}")
+    return results
+
+
+def profile_irrig(df, char_col='share_irrig', char_label='Irrigation share'):
+    """Irrigation share is heavily zero-inflated (~63% of ADCs have none), so
+    plain terciles collapse into two bins. Report the un-irrigated ADCs as their
+    own group, then split the positively-irrigated ADCs into terciles -- giving a
+    meaningful top tercile of the most heavily irrigated ADCs."""
+    sub = df[df[char_col].notna() & df['pred'].notna()].copy()
+    results = []
+    zero = sub[sub[char_col] <= 0]
+    row = eval_subsample(zero, 'yield', 'pred', f"{char_label}: None (0\\%)")
+    results.append(row)
+    print(f"  {row['label']:<55s} {row['N']:>8,} {row['R2']:>6.3f} {row['Btw']:>6.3f} {row['Wtn']:>7.3f} {row['RMSE']:>6.3f}")
+    results.extend(profile_by(sub[sub[char_col] > 0], char_col, char_label))
     return results
 
 
@@ -308,10 +329,6 @@ all_results.extend(res)
 
 print("\n  --- By maize share of ADC area ---")
 res = profile_by(df_valid, 'maize_share', 'Maize share')
-all_results.extend(res)
-
-print("\n  --- By irrigation share ---")
-res = profile_by(df_valid, 'share_irrig', 'Irrigation share')
 all_results.extend(res)
 
 print("\n  --- By number of production units ---")

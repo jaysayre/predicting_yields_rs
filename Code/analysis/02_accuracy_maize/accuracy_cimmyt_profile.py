@@ -34,7 +34,7 @@ MIN_YEAR    =  2017
 MAX_YEAR    =  2022
 # CIMMYT yields are self-reported and contain evident data-entry errors
 # (values up to 16,600 t/ha). Restrict to a plausible agronomic range before
-# computing any accuracy metric; ~2-3% of matched plots fall outside it.
+# computing any accuracy metric; ~2-3% of maize-grain plot observations fall outside it.
 CLEAN_LO    =  0.3     # t/ha, lower plausible maize yield
 CLEAN_HI    =  20.0    # t/ha, upper plausible maize yield
 N_BOOT      =  500     # municipality-cluster bootstrap replications for CIs
@@ -723,7 +723,7 @@ _tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to CIMMYT plot-level AEF features
          f"{CLEAN_LO}--{CLEAN_HI}"
          r"\,t/ha range ($\approx$"
          f"{_drop_pct:.1f}"
-         r"\% of matched plots, reflecting evident data-entry errors up to 16{,}600\,t/ha) "
+         r"\% of maize-grain plot observations, reflecting evident data-entry errors up to 16{,}600\,t/ha) "
          r"are excluded. Between- and within-$R^2$ use municipality groupings. The naive "
          r"baseline assigns every plot its SIAP municipal mean and therefore has zero "
          r"within-municipality skill by construction; the ensemble's within-$R^2 = "

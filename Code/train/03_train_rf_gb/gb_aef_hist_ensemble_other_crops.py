@@ -117,6 +117,30 @@ def eval_row(df, ycol, pcol, label):
     print(f"  {label:<45s} {n:>8,} {ov:>6.3f} {b:>6.3f} {w:>7.3f} {rmse:>6.3f}")
     return {'N': n, 'R2': ov, 'Btw': b, 'Wtn': w, 'RMSE': rmse}
 
+def cv_lambda(df, pcol, ycol, gc='muncode'):
+    """Leave-municipalities-out CV shrinkage factor lambda* = rho/r in [0,1]."""
+    from sklearn.model_selection import GroupKFold
+    s = df[[ycol, pcol, gc]].replace([np.inf, -np.inf], np.nan).dropna().copy()
+    cnt = s.groupby(gc)[ycol].transform('size'); s = s[cnt >= 2].reset_index(drop=True)
+    if s[gc].nunique() < 5:
+        return np.nan
+    lams = []
+    for tr, _ in GroupKFold(n_splits=5).split(s, groups=s[gc]):
+        d = s.iloc[tr]
+        a = (d[ycol] - d.groupby(gc)[ycol].transform('mean')).values
+        b = (d[pcol] - d.groupby(gc)[pcol].transform('mean')).values
+        den = np.sqrt(np.sum(a * a) * np.sum(b * b))
+        if den <= 0:
+            continue
+        rho = np.sum(a * b) / den; rr = np.sqrt(np.sum(b * b) / np.sum(a * a))
+        if rr > 0:
+            lams.append(rho / rr)
+    return float(np.clip(np.mean(lams), 0, 1)) if lams else np.nan
+
+def apply_shrink(df, pcol, lam, gc='muncode'):
+    g = df.groupby(gc)[pcol]
+    return g.transform('mean') + lam * (df[pcol] - g.transform('mean'))
+
 def subsample_bins(train_df, bin_cols, K, N, seed=42):
     rng = np.random.default_rng(seed)
     n_dims, n_bins = 64, 8
@@ -274,11 +298,18 @@ for crop_name, season in CROP_SEASONS.items():
         siap_mun['yield_siap'].notna() & (siap_mun['yield_siap'] > 0)
     ][['muncode', 'yield_siap']]
 
-    # Additive correction
+    # Additive correction with EX-ANTE ag-land weights (not census land_input)
     pcol = f'pred_{crop_name}'
-    df['wQ'] = df[pcol] * df['land_input']
+    if 'corr_w' not in df.columns:
+        _ag = pd.read_csv(os.path.join(proj_dir, "Data", "SIAP_agland", "Output",
+                                       "2007_adcs_agland_area.csv"))
+        _ag['adc'] = _ag['adc07'].astype(str).str.replace('-', '', regex=False)
+        df = df.merge(_ag[['adc', 'siap_agland_area']], on='adc', how='left')
+        df['corr_w'] = np.where(df['siap_agland_area'] > 0, df['siap_agland_area'],
+                                df['land_input'])
+    df['wQ'] = df[pcol] * df['corr_w']
     df['wA'] = df.apply(
-        lambda x, c=pcol: x['land_input'] if np.isfinite(x[c]) else 0, axis=1)
+        lambda x, c=pcol: x['corr_w'] if np.isfinite(x[c]) else 0, axis=1)
     mun_agg = df.groupby('muncode').agg({'wQ': 'sum', 'wA': 'sum'}).reset_index()
     mun_agg['pred_mun_avg'] = mun_agg['wQ'] / mun_agg['wA']
     mun_agg.loc[mun_agg['wA'] == 0, 'pred_mun_avg'] = np.nan
@@ -297,8 +328,15 @@ for crop_name, season in CROP_SEASONS.items():
     m_raw  = eval_row(df, 'yield', pcol,     f'{crop_name} AEF Hist Ens. Raw')
     m_corr = eval_row(df, 'yield', corr_col, f'{crop_name} AEF Hist Ens. Corr.')
 
+    # within-municipality shrinkage (leave-municipalities-out CV lambda)
+    lam = cv_lambda(df, pcol, 'yield')
+    shr_col = f'pred_{crop_name}_shrink'
+    df[shr_col] = apply_shrink(df, pcol, lam) if np.isfinite(lam) else df[pcol]
+    m_shr = eval_row(df, 'yield', shr_col, f'{crop_name} AEF Hist Ens. Shrink (lam={lam:.2f})')
+
     all_adc_results.append({'Crop': crop_name, 'Model': 'AEF Hist Ens.', **m_raw})
     all_adc_results.append({'Crop': crop_name, 'Model': 'AEF Hist Ens. Corr.', **m_corr})
+    all_adc_results.append({'Crop': crop_name, 'Model': 'AEF Hist Ens. Shrink', **m_shr})
 
 
 # -- 3. Print summary & update Overleaf table ----------------
@@ -323,32 +361,27 @@ tex_path = os.path.join(overleaf, "accuracy_other_crops_adc_2022.tex")
 with open(tex_path, 'r') as f:
     old_lines = f.readlines()
 
-# Build new table
+def fmt(v):
+    if np.isnan(v):
+        return "---"
+    return f"$-${abs(v):.3f}" if v < 0 else f"{v:.3f}"
+
+def hist_ens_rows(crop_name):
+    return [f"{r['Crop']} & {r['Model']} & {r['N']:,} & {fmt(r['R2'])} & {fmt(r['Btw'])} "
+            f"& {fmt(r['Wtn'])} & {fmt(r['RMSE'])} \\\\\n"
+            for r in all_adc_results if r['Crop'] == crop_name]
+
+# Idempotent rebuild: drop any previously-inserted AEF Hist Ens rows, then insert
+# the fresh Raw/Corr/Shrink rows just before each crop's SIAP row.
 new_lines = []
 for line in old_lines:
-    new_lines.append(line)
-
-    # After each crop's last row (before \hline), insert ensemble rows
+    if 'AEF Hist Ens' in line:          # remove stale ensemble rows (re-runnable)
+        continue
     for crop_name in CROP_SEASONS:
-        crop_results = [r for r in all_adc_results if r['Crop'] == crop_name]
-        if not crop_results:
-            continue
-
-        # Find the last model row for this crop (AEF Hist Corr. or SIAP)
-        # Insert before \hline that follows this crop's block
-        check_strs = [f"{crop_name} & SIAP", f"{crop_name} & AEF Hist Corr."]
-        for cs in check_strs:
-            if cs in line:
-                for r in crop_results:
-                    def fmt(v):
-                        if np.isnan(v):
-                            return "---"
-                        if v < 0:
-                            return f"$-${abs(v):.3f}"
-                        return f"{v:.3f}"
-                    new_row = f"{r['Crop']} & {r['Model']} & {r['N']:,} & {fmt(r['R2'])} & {fmt(r['Btw'])} & {fmt(r['Wtn'])} & {fmt(r['RMSE'])} \\\\\n"
-                    new_lines.append(new_row)
-                break
+        if f"{crop_name} & SIAP" in line:
+            new_lines.extend(hist_ens_rows(crop_name))
+            break
+    new_lines.append(line)
 
 with open(tex_path, 'w') as f:
     f.writelines(new_lines)

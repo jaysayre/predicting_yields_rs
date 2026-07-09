@@ -3,6 +3,8 @@
 
 CODE_DIR   := $(PROJ_DIR)/Code
 PLOTS_DIR  := $(DATA_DIR)/plots
+TABLES_DIR := $(DATA_DIR)/tables
+EXTRAS_DIR := $(DATA_DIR)/plots/coauthor_extras_paper
 FIG_DIR    := $(OVERLEAF_DIR)/figures
 
 .PHONY: copy_to_overleaf
@@ -12,9 +14,13 @@ copy_to_overleaf:
 	cp "$(PLOTS_DIR)/accuracy_fall_winter_2022.tex"     "$(OVERLEAF_DIR)/"
 	cp "$(PLOTS_DIR)/accuracy_spring_summer_2022.tex"   "$(OVERLEAF_DIR)/"
 	cp "$(PLOTS_DIR)/accuracy_other_crops_adc_2022.tex" "$(OVERLEAF_DIR)/"
-	cp "$(PLOTS_DIR)/accuracy_other_crops_mun_2022.tex" "$(OVERLEAF_DIR)/"
-	cp "$(PLOTS_DIR)/accuracy_mun_level_2022.tex"      "$(OVERLEAF_DIR)/"
+	# accuracy_other_crops_mun_2022.tex (Table 8) cut from the paper (2026-06-10)
+	cp "$(TABLES_DIR)/accuracy_mun_level_2022.tex"           "$(OVERLEAF_DIR)/"
+	cp "$(TABLES_DIR)/validation_mun_level_2022.tex"          "$(OVERLEAF_DIR)/"
+	cp "$(TABLES_DIR)/census_thought_experiment_2022.tex"    "$(OVERLEAF_DIR)/"
 	@echo "Copying figures to Overleaf..."
+	cp "$(EXTRAS_DIR)/fig_representativeness_targeting.png" "$(FIG_DIR)/"
+	cp "$(EXTRAS_DIR)/fig_ranking_inversion.png"           "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/accuracy_scatter_combined_2022.pdf"  "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/accuracy_scatter_seasonal_2022.pdf"  "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/maizeyield_mun_allmx.png"            "$(FIG_DIR)/"
