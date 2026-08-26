@@ -11,14 +11,33 @@
 # Run from code repo root: ~/Dropbox/Github/predicting_yields_rs/
 
 SHELL         := /bin/bash
-PROJ_DIR      := $(shell cd $(dir $(lastword $(MAKEFILE_LIST)))/.. && pwd)
+# GNU make cannot handle spaces in prerequisite paths, so prefer the space-free
+# ~/Dropbox symlink over the physical path (laptop physical path contains
+# "CalAg Dropbox/Jay Sayre"). Falls back to the resolved path elsewhere.
+ifneq ($(wildcard $(HOME)/Dropbox/Github/predicting_yields_rs/Code/pipeline.mk),)
+  PROJ_DIR    := $(HOME)/Dropbox/Github/predicting_yields_rs
+else
+  PROJ_DIR    := $(shell cd $(dir $(lastword $(MAKEFILE_LIST)))/.. && pwd)
+endif
 CODE_DIR      := $(PROJ_DIR)/Code
 DATA_DIR      := $(HOME)/Dropbox/Projects/Maize_prediction
 
 # ── Conda activation prefix ─────────────────────────────
-CONDA_ACTIVATE  = source /usr/local/anaconda3/etc/profile.d/conda.sh && conda activate
-MPC_ENV         = $(CONDA_ACTIVATE) mpc_env &&
-ML_ENV          = $(CONDA_ACTIVATE) ML_env &&
+# Auto-detect machine: server (Deloach, /usr/local/anaconda3, envs mpc_env/ML_env)
+# vs laptop (~/miniforge3, envs geo_env/ml_cuda). Override with e.g.
+#   make -f Code/pipeline.mk analysis GEO_ENV_NAME=myenv ML_ENV_NAME=myenv
+ifneq ($(wildcard /usr/local/anaconda3/etc/profile.d/conda.sh),)
+  CONDA_SH     ?= /usr/local/anaconda3/etc/profile.d/conda.sh
+  GEO_ENV_NAME ?= mpc_env
+  ML_ENV_NAME  ?= ML_env
+else
+  CONDA_SH     ?= $(HOME)/miniforge3/etc/profile.d/conda.sh
+  GEO_ENV_NAME ?= geo_env
+  ML_ENV_NAME  ?= ml_cuda
+endif
+CONDA_ACTIVATE  = source $(CONDA_SH) && conda activate
+MPC_ENV         = $(CONDA_ACTIVATE) $(GEO_ENV_NAME) &&
+ML_ENV          = $(CONDA_ACTIVATE) $(ML_ENV_NAME) &&
 
 # ── Notebook execution ───────────────────────────────────
 NB_EXEC       = jupyter nbconvert --execute --inplace --ExecutePreprocessor.timeout=3600
@@ -107,11 +126,11 @@ analysis_01: train_03
 
 analysis_02: analysis_01
 	$(MAKE) -f $(CODE_DIR)/analysis/02_accuracy_maize/02_accuracy_maize.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" NB_EXEC="$(NB_EXEC)"
+		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" ML_ENV="$(ML_ENV)" NB_EXEC="$(NB_EXEC)"
 
 analysis_03: analysis_01
 	$(MAKE) -f $(CODE_DIR)/analysis/03_accuracy_other_crops/03_accuracy_other_crops.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" NB_EXEC="$(NB_EXEC)"
+		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" ML_ENV="$(ML_ENV)" NB_EXEC="$(NB_EXEC)"
 
 analysis_04: analysis_02 analysis_03
 	$(MAKE) -f $(CODE_DIR)/analysis/04_copy_to_overleaf/04_copy_to_overleaf.mk \

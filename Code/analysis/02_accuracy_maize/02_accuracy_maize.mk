@@ -11,12 +11,14 @@ TASK_DIR := $(CODE_DIR)/analysis/02_accuracy_maize
 
 PLOTS_DIR  := $(DATA_DIR)/plots
 TABLES_DIR := $(DATA_DIR)/tables
+PREDS_DIR  := $(DATA_DIR)/Data/predictions
 
 EXTRAS_DIR := $(DATA_DIR)/plots/coauthor_extras_paper
 
 .PHONY: accuracy_maize
 accuracy_maize: \
 	$(PLOTS_DIR)/accuracy_combined_2022.tex \
+	$(PLOTS_DIR)/common_sample_combined_2022.tex \
 	$(PLOTS_DIR)/accuracy_scatter_combined_2022.pdf \
 	$(TABLES_DIR)/accuracy_profile_by_adc_chars.tex \
 	$(TABLES_DIR)/accuracy_cimmyt_profile.tex \
@@ -26,14 +28,28 @@ accuracy_maize: \
 	$(EXTRAS_DIR)/fig_representativeness_targeting.png \
 	$(EXTRAS_DIR)/fig_ranking_inversion.png
 
+# ── NDVI (masked) baseline: cropland-masked aefn2 features ──────────────
+# Muni-level feature cache + random muni-year 5-fold CV predictions. Also
+# writes muni_aefn2_masked.parquet, which train/05_train_agg_nn/
+# train_holdout_validation_models.py ('masked' arg) consumes.
+$(PREDS_DIR)/mun_aefn2_masked_gb_kfold_preds.parquet: $(TASK_DIR)/masked_muni_cv.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
+# Muni-trained model scored at the ADC level -> adc_aefn2_masked_preds.parquet,
+# the NDVI (masked) rows of the main accuracy tables.
+$(PREDS_DIR)/adc_aefn2_masked_preds.parquet: $(TASK_DIR)/partial_masked_mun_train_adc_eval.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
 # Survey-improvement table with EX-ANTE agricultural-land aggregation weights
 # (Table \ref{tab:mun_agg_results}); supersedes the notebook's census-weighted version.
-$(TABLES_DIR)/accuracy_mun_level_2022.tex: $(TASK_DIR)/mun_survey_improvement.py
+$(TABLES_DIR)/accuracy_mun_level_2022.tex: $(TASK_DIR)/mun_survey_improvement.py \
+		$(PREDS_DIR)/mun_aefn2_masked_gb_kfold_preds.parquet \
+		$(PREDS_DIR)/mun_aef_hist_gb_kfold_preds.parquet
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
 # Oracle ADC-trained ceiling row (non-deployable); feeds the benchmark sections
 # of the combined/spring-summer accuracy tables built by accuracy_main_2022.py.
-$(DATA_DIR)/predictions/oracle_ceiling_2022.csv: $(TASK_DIR)/oracle_adc_ceiling.py
+$(PREDS_DIR)/oracle_ceiling_2022.csv: $(TASK_DIR)/oracle_adc_ceiling.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
 # Census thought-experiment table for ALL models (Table \ref{tab:census_thought}).
@@ -62,7 +78,7 @@ $(EXTRAS_DIR)/fig_ranking_inversion.png: $(TASK_DIR)/fig_ranking_inversion.py $(
 
 # Main season accuracy tables (combined/spring/fall) -- one reproducible generator
 # with ex-ante ag-land corrections + per-model shrink rows.
-$(PLOTS_DIR)/accuracy_combined_2022.tex $(PLOTS_DIR)/accuracy_spring_summer_2022.tex $(PLOTS_DIR)/accuracy_fall_winter_2022.tex &: $(TASK_DIR)/accuracy_main_2022.py $(DATA_DIR)/predictions/oracle_ceiling_2022.csv
+$(PLOTS_DIR)/accuracy_combined_2022.tex $(PLOTS_DIR)/accuracy_spring_summer_2022.tex $(PLOTS_DIR)/accuracy_fall_winter_2022.tex &: $(TASK_DIR)/accuracy_main_2022.py $(PREDS_DIR)/oracle_ceiling_2022.csv
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
 # Scatter figures still come from the metrics notebook.

@@ -70,3 +70,15 @@ clean_3period_histograms_muni:
 clean_3period_histograms_adc:
 	cd $(DATA_DIR) && $(ML_ENV) python3 $(TASK_DIR)/clean_3period_histograms.py \
 		Data/adc_3period_hists_16bins Data/adc_3period_hists_clean 16 adc
+
+# ── Cropland-masked aefn2 features (the paper's NDVI (masked) baseline) ──
+# AEF-mirroring marginal features (150/unit-year) on ESA WorldCover cropland
+# pixels. Full battle log + resubmission recipe: AEFN2_PULL_HANDOFF.md.
+.PHONY: extract_cropland_features
+extract_cropland_features:
+	@echo "MANUAL STEP (Earth Engine): the paper's NDVI (masked) feature extraction"
+	@echo "  1. $(MPC_ENV) python3 $(TASK_DIR)/prepare_adc_geometries.py    # if geometries stale"
+	@echo "  2. Run ls_cropland_features.py (ML env, EE auth) — submits GEE batch exports"
+	@echo "  3. TAG=crop_aefn2 $(TASK_DIR)/pull_cropland_csvs.sh            # pull by file-ID from Drive"
+	@echo "  4. Consolidate → Data/cropland_features/ (see AEFN2_PULL_HANDOFF.md)"
+	@echo "Downstream: analysis/02_accuracy_maize/masked_muni_cv.py + partial_masked_mun_train_adc_eval.py"

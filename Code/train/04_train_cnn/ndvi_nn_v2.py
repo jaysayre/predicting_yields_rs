@@ -22,6 +22,10 @@ import pickle
 from ast import literal_eval
 
 import pandas as pd
+
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..'))
+from siap_yields import load_muni_yields
 import numpy as np
 import torch
 import torch.nn as nn
@@ -247,15 +251,13 @@ if not os.path.isdir(os.path.join(data_dir, 'Data')):
     data_dir =  os.path.expanduser("~/Dropbox/Projects/Maize_prediction")
 print(f"Data dir: {data_dir}")
 
-yields_path      =  os.path.join(data_dir, "Data", "muni_grano_yields.csv")
 hist_3ch_dir     =  os.path.join(data_dir, "Data", "muni_vi_hists_0.2_1.0_0.0_12.0_0.0_0.6_32_max")
 hist_1ch_dir     =  os.path.join(data_dir, "Data", "muni_ndvi_hist_0.2_1.0_32_max")
 adc_counts_path  =  os.path.join(data_dir, "Data", "mun_adc_pixel_counts.csv")
 out_dir          =  os.path.join(data_dir, "Data", "predictions")
 os.makedirs(out_dir, exist_ok=True)
 
-mun_maize_yields            =  pd.read_csv(yields_path)
-mun_maize_yields['muncode'] =  mun_maize_yields['muncode'].apply(int)
+mun_maize_yields            =  load_muni_yields()   # canonical SIAP Maize/Spring-Summer
 
 # ── Load histograms: prefer 3-channel, fall back to 1-channel ────
 if os.path.isdir(hist_3ch_dir):

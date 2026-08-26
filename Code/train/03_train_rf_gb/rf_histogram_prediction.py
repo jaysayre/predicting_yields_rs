@@ -17,6 +17,10 @@ import numpy   as np
 from scipy     import stats
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..'))
+from siap_yields import load_muni_yields
+
 
 # ============================================================
 # CONFIGURATION
@@ -225,8 +229,7 @@ def main():
     ).astype(int)
 
     # Load yields
-    yields =  pd.read_csv(os.path.join(data_dir, "muni_grano_yields.csv"))
-    yields =  yields[yields['yield'].notna() & (yields['yield'] > 0)]
+    yields =  load_muni_yields()          # canonical SIAP Maize/Spring-Summer
     print(f"Yields: {yields.shape}")
 
     # Merge

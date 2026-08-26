@@ -16,7 +16,18 @@ train_agg_nn: \
 	$(TABLES_DIR)/validation_mun_level_2022.tex
 
 # Municipality-level held-out validation (Table \ref{tab:validation_mun})
-$(TABLES_DIR)/validation_mun_level_2022.tex: $(TASK_DIR)/validation_mun_level.py $(PREDS_DIR)/adc_agg_nn_preds_maize_phase2_final.parquet
+$(TABLES_DIR)/validation_mun_level_2022.tex: $(TASK_DIR)/validation_mun_level.py $(PREDS_DIR)/adc_agg_nn_preds_maize_phase2_final.parquet $(PREDS_DIR)/adc_aef_hist_ens_holdout_preds.parquet $(PREDS_DIR)/mun_aefn2_masked_gb_holdout_preds.parquet
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
+# NDVI (masked) holdout row. Requires the muni feature cache
+# (Data/predictions/muni_aefn2_masked.parquet) written by
+# analysis/02_accuracy_maize/masked_muni_cv.py — run that first.
+$(PREDS_DIR)/mun_aefn2_masked_gb_holdout_preds.parquet: $(TASK_DIR)/train_holdout_validation_models.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $< masked
+
+# Holdout-clean model retraining for Table 1 (writes the five *_holdout_*
+# prediction files; the ensemble file is last, so it stands in for all five)
+$(PREDS_DIR)/adc_aef_hist_ens_holdout_preds.parquet: $(TASK_DIR)/train_holdout_validation_models.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 
 $(PREDS_DIR)/adc_agg_nn_preds_maize_phase2_final.parquet: $(TASK_DIR)/agg_constrained_nn.py

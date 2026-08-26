@@ -213,6 +213,19 @@ adc_combo = adc_bh.merge(
 )
 adc_combo['adc'] = adc_combo['adcid'].str.replace('-', '', regex=False)
 
+# Drop rows whose features are ENTIRELY absent (ported from gb_aef_hist_ensemble.py,
+# where this was fixed 2026-07-27; this script still had the old behaviour).
+# The parquets carry a row for every ADC but leave values null where the ESA
+# WorldCover cropland mask found no pixels. The fillna(0) further down would
+# otherwise turn those into all-zero vectors and emit a confident-looking constant
+# (measured R2 = 0.006 on such rows in the maize run), inflating every crop's
+# metrics. Applied once here, so it covers all four crops in the loop below.
+_bin_null = adc_combo[bin_cols].isna().all(axis=1)
+_pct_null = adc_combo[pct_cols].isna().all(axis=1)
+print(f"  dropping {int((_bin_null | _pct_null).sum()):,} ADCs with no cropland pixels "
+      f"(all-null features)")
+adc_combo = adc_combo[~(_bin_null | _pct_null)].copy()
+
 # SIAP yields (all crops)
 siap = pd.read_stata(siap_path)
 siap['muncode']  =  siap['muncode'].apply(lambda x: str(int(x)).zfill(5))
@@ -355,10 +368,17 @@ for r in all_adc_results:
 
 
 # -- 4. Read existing table and insert new rows --------------
-print("\nUpdating Overleaf table...")
+# Writes to tables/ ONLY by default (2026-08-16). This script used to overwrite
+# the live Overleaf copy on every run, which makes an exploratory re-run edit the
+# paper silently. Pass --write_overleaf to update it deliberately; the template is
+# still READ from Overleaf so the surrounding table structure is preserved.
+WRITE_OVERLEAF = '--write_overleaf' in sys.argv
 tex_path = os.path.join(overleaf, "accuracy_other_crops_adc_2022.tex")
+proj_tex = os.path.join(proj_dir, "tables", "accuracy_other_crops_adc_2022.tex")
+src_tex  = tex_path if os.path.exists(tex_path) else proj_tex
+print(f"\nBuilding table (template: {src_tex})")
 
-with open(tex_path, 'r') as f:
+with open(src_tex, 'r') as f:
     old_lines = f.readlines()
 
 def fmt(v):
@@ -383,15 +403,16 @@ for line in old_lines:
             break
     new_lines.append(line)
 
-with open(tex_path, 'w') as f:
-    f.writelines(new_lines)
-print(f"  Updated: {tex_path}")
-
-# Also save to project tables dir
-proj_tex = os.path.join(proj_dir, "tables", "accuracy_other_crops_adc_2022.tex")
 os.makedirs(os.path.dirname(proj_tex), exist_ok=True)
 with open(proj_tex, 'w') as f:
     f.writelines(new_lines)
 print(f"  Saved: {proj_tex}")
+
+if WRITE_OVERLEAF:
+    with open(tex_path, 'w') as f:
+        f.writelines(new_lines)
+    print(f"  Updated Overleaf: {tex_path}")
+else:
+    print("  Overleaf copy NOT touched (pass --write_overleaf to update it)")
 
 print(f"\nTotal runtime: {(time.time()-t0)/60:.1f} min")

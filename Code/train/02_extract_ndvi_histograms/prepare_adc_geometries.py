@@ -35,6 +35,9 @@ adc_shp_file         =  os.path.join(home_dir, "Dropbox", "Projects",
                                       "Avocado_Deforestation", "Data", "Shapefiles",
                                       "CA07", "CA2007_adcloc_poly.shp")
 planting_months_file =  os.path.join(data_dir, "planting_months_harmonic_regression.csv")
+# SIAP monthly planting months — fallback for municipalities absent from the
+# harmonic-regression file (states 11, 27, 28 are missing there entirely).
+siap_plant_file      =  os.path.join(data_dir, "SIAP_monthly", "Output", "max_harv_mnth.dta")
 
 # ── Outputs ──────────────────────────────────────────────
 adc_out_file   =  os.path.join(data_dir, "adc_geometries_for_ee.csv")
@@ -59,9 +62,30 @@ pm['muncode'] =  (
     pm['CVE_ENT'].apply(lambda x: add_zeros(x, 2)) +
     pm['CVE_MUN'].apply(lambda x: add_zeros(x, 3))
 )
-valid_muncodes =  set(pm['muncode'].tolist())
 pm_lookup      =  dict(zip(pm['muncode'], pm['planting_month']))
-print(f"Loaded {len(pm)} municipalities with planting months")
+print(f"Loaded {len(pm)} municipalities with harmonic-regression planting months")
+
+# ── Impute planting months for municipalities absent from the harmonic file ──
+# The harmonic-regression product covers 29 states (missing 11 Guanajuato,
+# 27 Tabasco, 28 Tamaulipas). Fill those from the SIAP monthly planting month
+# (max_plants_month_median for maize) — the same quantity the regression
+# approximates — so their ADCs are not dropped downstream.
+siap_pm =  pd.read_stata(siap_plant_file)
+siap_pm =  siap_pm[siap_pm['Crop'].astype(str).str.contains('Ma', na=False)].copy()
+siap_pm['muncode'] =  siap_pm['muncode'].astype(str).str.zfill(5)
+siap_pm =  siap_pm.dropna(subset=['max_plants_month_median'])
+siap_lookup =  (siap_pm.groupby('muncode')['max_plants_month_median']
+                       .median().round().astype(int).to_dict())
+
+n_imputed =  0
+for mc, mo in siap_lookup.items():
+    if mc not in pm_lookup:
+        pm_lookup[mc] =  mo
+        n_imputed +=  1
+print(f"Imputed {n_imputed} municipalities from SIAP monthly planting data")
+
+valid_muncodes =  set(pm_lookup.keys())
+print(f"Total municipalities with a planting month: {len(valid_muncodes)}")
 
 
 # ── Load ADC shapefile ───────────────────────────────────

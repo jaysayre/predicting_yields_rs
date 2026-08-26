@@ -1,7 +1,17 @@
+# Scratch markdown stays out of git, but core docs are whitelisted below
 *.md
+!README.md
+!PROJECT.md
+!CLAUDE.md
+!Code/train/02_extract_ndvi_histograms/AEFN2_PULL_HANDOFF.md
 __pycache__/
 *.pyc
 .claude/
 .ipynb_checkpoints/
 *.docx
 *.sps
+# Local working material not part of the pipeline
+MD_lab_code/
+*.odt
+*.bak
+*.log

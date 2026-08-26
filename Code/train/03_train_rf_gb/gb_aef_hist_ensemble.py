@@ -10,7 +10,18 @@ The ensemble prediction is: w * bins_pred + (1-w) * pct_pred
 
 Best config from sweep (2026-03-20):
   N=2 pixels per subsample, K=5 subsamples per mun-year, w=0.4
-  Combined season: R²=0.588, Btw=0.738, Wtn=0.152, RMSE=1.837
+  Combined season: R²=0.588, Btw=0.738, Wtn=0.152, RMSE=1.837  [SUPERSEDED]
+
+CORRECTED 2026-07-27. That 0.588 was computed over 72,581 ADCs of which 12,893
+had ALL-NULL features (no cropland under the ESA WorldCover mask) that fillna(0)
+silently turned into all-zero vectors; the model emitted a near-constant for them
+(R²=0.006 on that subset). Those rows are now dropped, giving the honest figures:
+  with means    N=59,641  R²=0.584  Btw=0.742  Wtn=0.170  RMSE=1.941
+  --drop_means  N=73,634  R²=0.527  Btw=0.710  Wtn=0.131  RMSE=2.115
+The two differ mostly by SAMPLE, not by skill: on the common 59,641 ADCs,
+dropping means costs only 0.014 R² (0.584->0.570) and slightly IMPROVES
+within-muni R² (0.170->0.175), while adding 13,993 harder, higher-yielding ADCs
+(R²=0.370, mean yield 3.61 vs 3.08) that the means file simply had no rows for.
 
 Usage:
   source /usr/local/anaconda3/etc/profile.d/conda.sh && conda activate mpc_env
@@ -28,6 +39,22 @@ sys.stdout.reconfigure(line_buffering=True)
 # ============================================================
 # CONFIGURATION
 # ============================================================
+# --drop_means excludes the 64-dim mean embeddings from the percentile model.
+# Why it exists: alpha_earth_mex_adcs.parquet (the means) covers only 126,335 of
+# 295,184 ADCs, and the inner join against it is what caps the scored sample --
+# 101,547 ADCs have perfectly good histogram features that get discarded.
+# Ablation (2026-07-27, N=59,641 with every feature block genuinely populated):
+# means add just +0.026 R2 to the percentile model (0.502 -> 0.528) while
+# REDUCING within-muni R2 (0.132 -> 0.119); in the ensemble, dropping them costs
+# 0.024 R2 and shifts within-R2 by 0.001. Default stays True so the published
+# run reproduces exactly.
+import argparse as _argparse
+_ap =  _argparse.ArgumentParser()
+_ap.add_argument('--drop_means', action='store_true')
+_args, _ =  _ap.parse_known_args()
+USE_MEANS   =  not _args.drop_means
+TAG         =  '' if USE_MEANS else '_nomeans'
+
 N_PIX       =  2       # pixels per subsample draw
 K_SAMP      =  5       # subsamples per mun-year
 W_BIN       =  0.4     # ensemble weight on bins model
@@ -59,7 +86,7 @@ pct_cols  =  []
 for d in range(64):
     for s in ['_p10', '_p25', '_p50', '_p75', '_p90', '_stdDev']:
         pct_cols.append(f"A{d:02d}{s}")
-pct_combined =  pct_cols + mean_cols   # 448 features
+pct_combined =  pct_cols + mean_cols if USE_MEANS else list(pct_cols)   # 448 or 384
 
 
 # ── HistGB config ────────────────────────────────────────
@@ -163,7 +190,7 @@ mun_mean['muncode']  =  mun_mean['CVE_ENT'] + mun_mean['CVE_MUN']
 mun_pct_full = mun_pct.merge(
     mun_mean[['muncode', 'year'] + mean_cols],
     on=['muncode', 'year'], how='inner'
-)
+) if USE_MEANS else mun_pct
 
 # SIAP yields
 siap = pd.read_stata(siap_path)
@@ -220,13 +247,24 @@ adc_m =  adc_m[adc_m['year'] == EVAL_YEAR].copy()
 adc_pct_full = adc_pct_d.merge(
     adc_m[['adcid', 'year'] + mean_cols],
     on=['adcid', 'year'], how='inner'
-)
+) if USE_MEANS else adc_pct_d
 
 # Inner join: only ADCs with both bin and percentile features
 adc_combo = adc_bh.merge(
     adc_pct_full[['adcid', 'year'] + pct_combined],
     on=['adcid', 'year'], how='inner'
 )
+
+# Drop rows whose features are ENTIRELY absent: the parquets carry a row for
+# every ADC but leave the values null where the ESA WorldCover cropland mask
+# found no pixels. fillna(0) below would otherwise turn those into all-zero
+# vectors and emit a confident-looking constant prediction (measured R2 = 0.006
+# on 12,893 such rows in the published run).
+_bin_null =  adc_combo[bin_cols].isna().all(axis=1)
+_pct_null =  adc_combo[pct_cols].isna().all(axis=1)
+print(f"  dropping {int((_bin_null | _pct_null).sum()):,} ADCs with no cropland pixels "
+      f"(all-null features)")
+adc_combo =  adc_combo[~(_bin_null | _pct_null)].copy()
 
 
 # ── 5. Ensemble predictions ─────────────────────────────
@@ -291,26 +329,48 @@ siap_mun = siap_mun[
     siap_mun['yield_siap'].notna() & (siap_mun['yield_siap'] > 0)
 ][['muncode', 'yield_siap']]
 
-mun_agg = mun_agg.merge(siap_mun, on='muncode', how='left')
-mun_agg['diff'] = mun_agg['pred_mun_avg'] - mun_agg['yield_siap']
+# Spring-Summer-only anchor for the P-V rows (fixed 2026-08-15). The anchor
+# above sums ALL growing seasons, which is right for the combined-season target
+# (`yield`) but a season mismatch for the P-V target (`yield_pv`): it removes a
+# bias defined on a different quantity than the one being scored, and inflates
+# the P-V corrected R2. Same defect fixed in accuracy_main_2022.py, where it was
+# worth ~0.08 R2 on that row.
+siap_mun_pv = siap_2022[siap_2022['growing_season'] == SEASON].groupby('muncode').agg(
+    {'q': 'sum', 'ha_planted': 'sum'}
+).reset_index()
+siap_mun_pv['yield_siap'] = siap_mun_pv['q'] / siap_mun_pv['ha_planted']
+siap_mun_pv = siap_mun_pv[
+    siap_mun_pv['yield_siap'].notna() & (siap_mun_pv['yield_siap'] > 0)
+][['muncode', 'yield_siap']]
+print(f"  anchors: combined {len(siap_mun):,} munis | {SEASON} {len(siap_mun_pv):,} munis")
 
-df = df.merge(mun_agg[['muncode', 'diff']], on='muncode', how='left')
-df['pred_corr'] = (df['pred'] - df['diff']).clip(lower=0)
-df.loc[df['pred'].isna(), 'pred_corr'] = np.nan
+
+def _apply_correction(anchor, colname):
+    """Additive ex-post correction against a given municipal anchor."""
+    a = mun_agg[['muncode', 'pred_mun_avg']].merge(anchor, on='muncode', how='left')
+    a['diff'] = a['pred_mun_avg'] - a['yield_siap']
+    m = df.merge(a[['muncode', 'diff']], on='muncode', how='left')
+    out = (m['pred'] - m['diff']).clip(lower=0)
+    out[m['pred'].isna()] = np.nan
+    df[colname] = out.values
+
+
+_apply_correction(siap_mun,    'pred_corr')      # combined season: all seasons
+_apply_correction(siap_mun_pv, 'pred_corr_pv')   # P-V: Spring-Summer only
 
 
 # ── 8b. Save predictions ────────────────────────────────
 print("\nSaving predictions ...")
 adc_out  =  adc_combo[['adcid', 'year', 'pred']].copy()
 adc_out['muncode']  =  adc_out['adcid'].str[:5]
-out_path  =  os.path.join(pred_dir, "adc_aef_hist_ens_preds.parquet")
+out_path  =  os.path.join(pred_dir, f"adc_aef_hist_ens_preds{TAG}.parquet")
 adc_out[['adcid', 'muncode', 'year', 'pred']].to_parquet(out_path, index=False)
 print(f"  {out_path}  ({len(adc_out):,} rows)")
 
 # Also save the GT-merged frame with correction (one row per INEGI maize UP)
 df_out  =  df[['adc', 'muncode', 'land_input', 'yield', 'yield_pv',
-                 'pred', 'pred_corr']].copy()
-out_eval_path  =  os.path.join(pred_dir, "adc_aef_hist_ens_eval.parquet")
+                 'pred', 'pred_corr', 'pred_corr_pv']].copy()
+out_eval_path  =  os.path.join(pred_dir, f"adc_aef_hist_ens_eval{TAG}.parquet")
 df_out.to_parquet(out_eval_path, index=False)
 print(f"  {out_eval_path}  ({len(df_out):,} rows)")
 
@@ -327,6 +387,6 @@ eval_row(df, 'yield', 'pred_corr', 'AEF Hist Ens. Corr.')
 print("\n  --- Spring-summer (P-V) ---")
 df_pv = df[df['yield_pv'].notna()].copy()
 eval_row(df_pv, 'yield_pv', 'pred',      'AEF Hist Ens. Raw')
-eval_row(df_pv, 'yield_pv', 'pred_corr', 'AEF Hist Ens. Corr.')
+eval_row(df_pv, 'yield_pv', 'pred_corr_pv', 'AEF Hist Ens. Corr.')
 
 print(f"\nRuntime: {(time.time()-t0)/60:.1f} min")

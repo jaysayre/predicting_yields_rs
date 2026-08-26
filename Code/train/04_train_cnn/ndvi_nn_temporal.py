@@ -20,6 +20,10 @@ import pickle
 from ast import literal_eval
 
 import pandas as pd
+
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..'))
+from siap_yields import load_muni_yields
 import numpy as np
 import torch
 import torch.nn as nn
@@ -433,8 +437,7 @@ hist_path =  "../Data/monthly_hists_clean/monthly_hists_all.pkl"
 hist_df   =  pd.read_pickle(hist_path)
 
 # Load yields
-mun_maize_yields            =  pd.read_csv("../processed_data/muni_grano_yields.csv")
-mun_maize_yields['muncode'] =  mun_maize_yields['muncode'].apply(int)
+mun_maize_yields            =  load_muni_yields()   # canonical SIAP Maize/Spring-Summer
 
 hist_df =  pd.merge(hist_df, mun_maize_yields, on=['muncode', 'year'])
 

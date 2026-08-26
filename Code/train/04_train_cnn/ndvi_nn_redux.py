@@ -5,6 +5,10 @@ import pickle
 from ast import literal_eval
 
 import pandas as pd
+
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..'))
+from siap_yields import load_muni_yields
 import numpy as np
 from tensorflow import keras
 from keras.layers import Conv2D, Conv1D, AveragePooling2D
@@ -106,10 +110,9 @@ def add_zeros(x,n):
     return(x)
 
 
-mun_maize_yields = pd.read_csv("../processed_data/muni_grano_yields.csv")
+mun_maize_yields = load_muni_yields()   # canonical SIAP Maize/Spring-Summer
 #mun_maize_yields = mun_maize_yields.loc[mun_maize_yields['yield']>0]
 #mun_maize_yields['yield'] = mun_maize_yields['yield'].apply(np.log)
-mun_maize_yields['muncode'] = mun_maize_yields['muncode'].apply(int)
 
 hist_fs = os.listdir("../processed_data/muni_vi_hists_0.2_1.0_0.0_12.0_0.0_0.6_32_max/")
 hist_fs = [f for f in hist_fs if ".pkl" in f]

@@ -1,0 +1,289 @@
+"""
+Unified generator for the combined- and spring-summer-season ADC-level accuracy
+tables (Tables \ref{tab:accuracy_combined}, \ref{tab:accuracy_spring_summer}).
+
+Produces, for every model (grouped Landsat-derived vs AEF-derived), three rows:
+  Raw      - uncorrected ADC predictions
+  Corr.    - additive ex-post correction toward the SIAP municipal yield, using
+             EX-ANTE agricultural-land weights (siap_agland_area) to form the
+             predicted municipal mean -- NOT census planted area (land_input)
+  Shrink   - within-municipality shrinkage of the raw deviations (CV lambda)
+plus the SIAP municipal-average benchmark. Metrics are computed against the
+INEGI 2022 census at the ADC level (combined = yield, spring-summer = yield_pv).
+
+This consolidates the previously hand-assembled tables into one reproducible
+script and makes every model's correction use the same ex-ante weighting.
+
+Run:  ~/miniforge3/envs/geo_env/bin/python accuracy_main_2022.py
+"""
+import os, numpy as np, pandas as pd, warnings
+warnings.filterwarnings("ignore")
+from sklearn.model_selection import GroupKFold
+
+home = os.path.expanduser("~")
+proj = os.path.join(home, "Dropbox", "Projects", "Maize_prediction")
+P    = os.path.join(proj, "Data", "predictions")
+plot_dir = os.path.join(proj, "plots")
+os.makedirs(plot_dir, exist_ok=True)
+
+def r2(y, yh):
+    m = np.isfinite(y) & np.isfinite(yh); y, yh = np.asarray(y)[m], np.asarray(yh)[m]
+    return 1 - np.sum((y - yh)**2)/np.sum((y - y.mean())**2) if m.sum() > 1 else np.nan
+def within_r2(df, y, p, gc="muncode"):
+    s = df[[y, p, gc]].replace([np.inf, -np.inf], np.nan).dropna()
+    c = s.groupby(gc).size(); s = s[s[gc].isin(c[c >= 2].index)]
+    if len(s) == 0: return np.nan
+    gm = s.groupby(gc)[[y, p]].transform("mean"); return r2(s[y]-gm[y], s[p]-gm[p])
+def between_r2(df, y, p, gc="muncode"):
+    s = df[[y, p, gc]].replace([np.inf, -np.inf], np.nan).dropna()
+    g = s.groupby(gc)[[y, p]].mean(); return r2(g[y], g[p])
+def met(df, ycol, pcol):
+    s = df[[ycol, pcol, "muncode"]].replace([np.inf, -np.inf], np.nan).dropna()
+    return (len(s), r2(s[ycol], s[pcol]), between_r2(s, ycol, pcol),
+            within_r2(s, ycol, pcol), np.sqrt(np.mean((s[ycol].values-s[pcol].values)**2)))
+def cv_lambda(df, pcol, ycol, gc="muncode"):
+    s = df[[ycol, pcol, gc]].replace([np.inf, -np.inf], np.nan).dropna().copy()
+    cnt = s.groupby(gc)[ycol].transform("size"); s = s[cnt >= 2].reset_index(drop=True)
+    if s[gc].nunique() < 5: return np.nan
+    lams = []
+    for tr, _ in GroupKFold(5).split(s, groups=s[gc]):
+        d = s.iloc[tr]
+        a = (d[ycol]-d.groupby(gc)[ycol].transform("mean")).values
+        b = (d[pcol]-d.groupby(gc)[pcol].transform("mean")).values
+        den = np.sqrt(np.sum(a*a)*np.sum(b*b))
+        if den > 0:
+            rho = np.sum(a*b)/den; rr = np.sqrt(np.sum(b*b)/np.sum(a*a))
+            if rr > 0: lams.append(rho/rr)
+    return float(np.clip(np.mean(lams), 0, 1)) if lams else np.nan
+def shrink(df, pcol, lam, gc="muncode"):
+    g = df.groupby(gc)[pcol]; return g.transform("mean") + lam*(df[pcol]-g.transform("mean"))
+def correct(df, pcol, gc="muncode"):
+    d = df[df[pcol].notna()].copy(); d["wv"] = d[pcol]*d["corr_w"]
+    a = d.groupby(gc).agg(wv=("wv","sum"), w=("corr_w","sum"), siap=("siap","first")).reset_index()
+    a["diff"] = a["wv"]/a["w"] - a["siap"]
+    out = df.merge(a[[gc,"diff"]], on=gc, how="left")
+    return (out[pcol] - out["diff"]).clip(lower=0)
+
+# ── data ────────────────────────────────────────────────
+ev = pd.read_parquet(os.path.join(P, "adc_aef_hist_ens_eval.parquet"))
+ev = ev[["adc","muncode","yield","yield_pv","land_input","pred"]].rename(columns={"pred":"AEF Hist Ens."})
+# fall-winter (O-I) ground truth
+ca2022_dir = os.path.join(proj, "Data", "INEGI", "MD_lab_outputs",
+                          "LM2304-CA22-2025-09-29-superficie_ENTREGA")
+ca_szn = pd.read_stata(os.path.join(ca2022_dir, "adc_land_szn_ca22_adc07.dta"))
+oi = ca_szn[(ca_szn["name"] == "Maize") & (ca_szn["type"] == "o-i")][["adc", "yield"]].rename(columns={"yield": "yield_oi"})
+ev = ev.merge(oi, on="adc", how="left")
+ag = pd.read_csv(os.path.join(proj,"Data","SIAP_agland","Output","2007_adcs_agland_area.csv"))
+ag["adc"] = ag["adc07"].astype(str).str.replace("-","",regex=False)
+ev = ev.merge(ag[["adc","siap_agland_area"]], on="adc", how="left")
+ev["corr_w"] = np.where(ev["siap_agland_area"] > 0, ev["siap_agland_area"], ev["land_input"])
+siap = pd.read_stata(os.path.join(home,"Dropbox/Projects/The Promise of Crop Substitution/data/SIAP/Cleaned/siap_ag_prod_estimation_by_season.dta"))
+siap["muncode"] = siap["muncode"].apply(lambda x: str(int(x)).zfill(5))
+s22 = siap[(siap["name"]=="Maize")&(siap["year"]==2022)]; s22 = s22[~s22["muncode"].str.endswith("000")]
+
+# ── Season-matched SIAP municipal anchors (fixed 2026-08-15) ──────────────
+# The anchor must match the census target being scored. Previously ONE
+# all-seasons anchor was used for every table, so the P-V and O-I tables
+# corrected against a combined-season municipal mean -- a season mismatch that
+# removes a bias defined on a different quantity than the one being scored.
+# It was worth ~+0.08 R2 on the P-V corrected row (0.403 true -> 0.481), in the
+# direction that flatters the model. The anchor also defines the SIAP benchmark
+# row and the common-sample intersection, so all three are now season-matched.
+#   combined      -> all seasons summed   (unchanged; correct for `yield`)
+#   spring_summer -> Spring-Summer only   (matches `yield_pv`)
+#   fall_winter   -> Fall-Winter only     (matches `yield_oi`)
+def _anchor(sub):
+    g = sub.groupby("muncode").agg(q=("q","sum"), ha=("ha_planted","sum")).reset_index()
+    g["siap"] = g["q"]/g["ha"]
+    return g.set_index("muncode")["siap"]
+
+ANCHORS = {"combined":      _anchor(s22),
+           "spring_summer": _anchor(s22[s22["growing_season"]=="Spring-Summer"]),
+           "fall_winter":   _anchor(s22[s22["growing_season"]=="Fall-Winter"])}
+ANCHOR_NOTE = {"combined":      "all growing seasons",
+               "spring_summer": "the Spring-Summer season only",
+               "fall_winter":   "the Fall-Winter season only"}
+for _t, _a in ANCHORS.items():
+    print(f"  anchor {_t:14s}: {len(_a):,} municipalities")
+
+def set_anchor(tag):
+    """Point ev['siap'] at the season-matched municipal anchor."""
+    ev["siap"] = ev["muncode"].map(ANCHORS[tag])
+
+ev["siap"] = ev["muncode"].map(ANCHORS["combined"])   # default
+
+# Harmonic NDVI models (ls_harmonic_features extraction, 2017-2024 muni-trained;
+# see harmonic_adc_eval.py). Replaces the old RS CNN + 3-period hist rows.
+# Only the 3-period-window pair is shown; the 2-period and raw-coefficient
+# variants underperform (see harmonic_adc_eval_summary.csv) and are omitted.
+LANDSAT = [("NDVI (masked)","adc_aefn2_masked_preds.parquet","pred")]  # aefn2 masked baseline (replaces h3 NDVI Hist/Q-Hist)
+AEFM    = [("AEF mean","adc_alpha_earth_preds.csv","yield_pred"),
+           ("Agg-NN","adc_mlp_yield_preds.csv","pred_yield"),
+           ("AEF Hist","adc_aef_hist_gb_preds.parquet","yield_pred"),
+           ("AEF Hist Ens.", None, None)]  # already in eval frame
+for nm,f,c in LANDSAT+AEFM:
+    if f is None: continue
+    d = pd.read_parquet(os.path.join(P,f)) if f.endswith("parquet") else pd.read_csv(os.path.join(P,f))
+    if "year" in d.columns: d = d[d["year"]==2022]
+    k = "adc" if "adc" in d.columns else "adcid"; d["adc"] = d[k].astype(str).str.replace("-","",regex=False)
+    ev = ev.merge(d[["adc",c]].rename(columns={c:nm}).dropna().drop_duplicates("adc"), on="adc", how="left")
+
+def fmt(v, neg_math=True):
+    if v is None or not np.isfinite(v): return "---"
+    s = f"{v:.3f}"
+    return s.replace("-", "$-$") if (neg_math and v < 0) else s
+
+def model_rows(label, season_y):
+    """Return (raw, corr, shrink) metric tuples for one model + season."""
+    rows = []
+    raw = met(ev, season_y, label); rows.append((f"{label} Raw", raw))
+    ev["_c"] = correct(ev, label); cr = met(ev, season_y, "_c"); rows.append((f"{label} Corr.", cr))
+    lam = cv_lambda(ev, label, season_y); ev["_s"] = shrink(ev, label, lam)
+    sh = met(ev, season_y, "_s"); rows.append((f"{label} Shrink", sh))
+    return rows
+
+def build_table(season_y, label_season, fname, tag):
+    set_anchor(tag)                      # season-matched SIAP anchor
+    orc_season = {"combined": "combined", "spring_summer": "spring_summer"}.get(tag)
+    orc_note = (r" The Oracle (ADC-trained) row is a non-deployable upper bound that trains "
+                r"HistGradientBoosting directly on ADC-level census labels (5-fold GroupKFold "
+                r"over municipalities); it bounds how much yield signal the embeddings carry."
+                ) if orc_season else ""
+    L = [r"\begin{table}[htbp]", r"\centering",
+         r"\caption{Accuracy metrics for maize yield predictions vs.\ INEGI 2022 census, "
+         rf"ADC level --- {label_season}. Corrected rows use ex-ante agricultural-land "
+         rf"weights for the municipal anchor, and the anchor is the SIAP municipal "
+         rf"maize yield for {ANCHOR_NOTE[tag]}, matching the census target scored "
+         rf"here.{orc_note}}}",
+         rf"\label{{tab:accuracy_{tag}}}", r"\begin{tabular}{lrrrrr}", r"\hline",
+         r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline",
+         r"\multicolumn{6}{l}{\textit{Landsat-derived features}} \\"]
+    def emit(group):
+        for nm,_,_ in group:
+            for tagn, m in model_rows(nm, season_y):
+                n, ov, bt, wt, rm = m
+                # Uniform inter-word spacing after abbreviation periods ("Hist.", "Ens.")
+                # so a model's Raw/Corr./Shrink rows are typeset identically.
+                lab = tagn.replace("Hist. Raw", "Hist.\\ Raw").replace("Hist. Corr.", "Hist.\\ Corr.").replace("Hist. Shrink", "Hist.\\ Shrink")
+                lab = lab.replace("Ens. Raw", "Ens.\\ Raw").replace("Ens. Corr.", "Ens.\\ Corr.").replace("Ens. Shrink", "Ens.\\ Shrink")
+                L.append(f"{lab} & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(wt)} & {fmt(rm)} \\\\")
+    emit(LANDSAT)
+    L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{AEF-derived features}} \\"]
+    emit(AEFM)
+    # Benchmark: SIAP municipal average + (combined/P-V) the ADC-trained oracle ceiling
+    sb = ev.assign(_siap=ev["siap"])
+    n, ov, bt, wt, rm = met(sb, season_y, "_siap")
+    L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{Benchmark}} \\",
+          f"SIAP & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\"]
+    orc_path = os.path.join(P, "oracle_ceiling_2022.csv")
+    if orc_season and os.path.exists(orc_path):
+        o = pd.read_csv(orc_path); o = o[o["season"] == orc_season]
+        if len(o):
+            r = o.iloc[0]
+            L.append(f"Oracle (ADC-trained) & {int(r['N']):,} & {fmt(r['R2'])} & "
+                     f"{fmt(r['Btw'])} & {fmt(r['Wtn'])} & {fmt(r['RMSE'])} \\\\")
+    L += [r"\hline", r"\end{tabular}", r"\end{table}", ""]
+    out = os.path.join(plot_dir, fname)
+    with open(out, "w") as f: f.write("\n".join(L))
+    print(f"Wrote {out}")
+
+def build_common_sample_table(season_y, label_season, fname, tag):
+    """Every model evaluated on the SAME ADCs (intersection of all model
+    predictions + SIAP), so cross-model differences are not sample composition."""
+    set_anchor(tag)                      # season-matched SIAP anchor
+    models =  [nm for nm,_,_ in LANDSAT + AEFM]
+    cs =  ev.dropna(subset=models + ["siap", season_y]).copy()
+    n_cs =  len(cs)
+    L = [r"\begin{table}[htbp]", r"\centering",
+         r"\caption{Common-sample accuracy for maize yield predictions vs.\ INEGI 2022 "
+         rf"census, ADC level --- {label_season}. Every model is evaluated on the "
+         rf"\emph{{same}} {n_cs:,} ADCs (the intersection of ADCs for which all Landsat- "
+         rf"and AEF-derived models produce a prediction and a SIAP municipal yield for "
+         rf"{ANCHOR_NOTE[tag]} exists), "
+         r"so cross-model differences are not driven by sample composition. Shrink rows "
+         r"apply the within-municipality shrinkage at the within-optimal "
+         r"$\lambda=\rho/r$ estimated on this sample.}",
+         rf"\label{{tab:common_sample_{tag}}}", r"\begin{tabular}{lrrrrr}", r"\hline",
+         r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline",
+         r"\multicolumn{6}{l}{\textit{Landsat-derived features}} \\"]
+    def emit(group):
+        for nm,_,_ in group:
+            raw =  met(cs, season_y, nm)
+            lam =  cv_lambda(cs, nm, season_y); cs["_s"] =  shrink(cs, nm, lam)
+            sh  =  met(cs, season_y, "_s")
+            for tagn, m in [(f"{nm} Raw", raw), (f"{nm} Shrink", sh)]:
+                n, ov, bt, wt, rm = m
+                lab = tagn.replace("Hist. Raw", "Hist.\\ Raw").replace("Hist. Shrink", "Hist.\\ Shrink")
+                lab = lab.replace("Ens. Raw", "Ens.\\ Raw").replace("Ens. Shrink", "Ens.\\ Shrink")
+                L.append(f"{lab} & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(wt)} & {fmt(rm)} \\\\")
+    emit(LANDSAT)
+    L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{AEF-derived features}} \\"]
+    emit(AEFM)
+    cs["_siap"] =  cs["siap"]
+    n, ov, bt, wt, rm =  met(cs, season_y, "_siap")
+    L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{Benchmark}} \\",
+          f"SIAP & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\",
+          r"\hline", r"\end{tabular}", r"\end{table}", ""]
+    out = os.path.join(plot_dir, fname)
+    with open(out, "w") as f: f.write("\n".join(L))
+    print(f"Wrote {out}  (common sample N={n_cs:,})")
+
+print("Combined-season rows:")
+set_anchor("combined")
+for nm,_,_ in LANDSAT+AEFM:
+    for t,m in model_rows(nm,"yield"): print(f"  {t:24s} N={m[0]:>6,} R2={m[1]:.3f} Btw={m[2]:.3f} Wtn={m[3]:.3f} RMSE={m[4]:.3f}")
+build_table("yield", "Combined season", "accuracy_combined_2022.tex", "combined")
+build_table("yield_pv", "Spring-summer (P-V) season", "accuracy_spring_summer_2022.tex", "spring_summer")
+build_table("yield_oi", "Fall-winter (O-I) season", "accuracy_fall_winter_2022.tex", "fall_winter")
+build_common_sample_table("yield", "Combined season", "common_sample_combined_2022.tex", "combined")
+build_common_sample_table("yield_pv", "Spring-summer (P-V) season", "common_sample_spring_summer_2022.tex", "spring_summer")
+
+# ── Scatter figures (replaces the notebook's old RS-based panels) ──
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+plt.rcParams.update({"font.family": "serif", "axes.edgecolor": "#404040",
+                     "axes.labelcolor": "#404040", "xtick.color": "#404040",
+                     "ytick.color": "#404040", "font.size": 11})
+
+def scatter_panel(ax, y, yh, title):
+    m = np.isfinite(y) & np.isfinite(yh)
+    ax.hexbin(y[m], yh[m], gridsize=45, bins="log", cmap="viridis",
+              extent=(0, 12, 0, 12), linewidths=0)
+    ax.plot([0, 12], [0, 12], "--", color="#B0B0B0", lw=1.0)
+    ax.set_xlim(0, 12); ax.set_ylim(0, 12)
+    ax.set_title(f"{title}\n$R^2$ = {r2(y[m], yh[m]):.3f}", fontsize=10)
+    ax.set_xlabel("Reported Yield (t/ha)", fontsize=9)
+    ax.tick_params(labelsize=8, length=0)
+
+SCATTER = ["NDVI (masked)", "AEF mean", "Agg-NN"]        # raw + corrected pairs
+for m in SCATTER:                                        # corrected columns
+    ev[f"_{m}_corr"] = correct(ev, m)
+
+pairs = [(m, m + " Raw") for m in SCATTER]
+cols  = []
+for m in SCATTER:
+    cols += [(m, f"{m} Raw"), (f"_{m}_corr", f"{m} Corr.")]
+cols += [("siap", "SIAP")]
+
+fig, axes = plt.subplots(1, len(cols), figsize=(3.3 * len(cols), 3.5))
+for ax, (c, nm) in zip(axes, cols):
+    scatter_panel(ax, ev["yield"].values, ev[c].values, nm)
+axes[0].set_ylabel("Predicted Yield (t/ha)", fontsize=9)
+fig.suptitle("Predicted vs. Reported Maize Yield (Combined Season, 2022)", y=1.04)
+fig.tight_layout()
+fig.savefig(os.path.join(plot_dir, "accuracy_scatter_combined_2022.pdf"), bbox_inches="tight")
+fig.savefig(os.path.join(plot_dir, "accuracy_scatter_combined_2022.png"), bbox_inches="tight", dpi=200)
+print("Wrote accuracy_scatter_combined_2022.{pdf,png}")
+
+scols = cols[:-1]                                        # seasonal: no SIAP panel
+fig, axes = plt.subplots(2, len(scols), figsize=(3.3 * len(scols), 7.0))
+for row, ycol, lab in [(0, "yield_oi", "Fall-Winter"), (1, "yield_pv", "Spring-Summer")]:
+    for ax, (c, nm) in zip(axes[row], scols):
+        scatter_panel(ax, ev[ycol].values, ev[c].values, nm)
+    axes[row][0].set_ylabel(f"Predicted Yield (t/ha)\n[{lab}]", fontsize=9)
+fig.suptitle("Predicted vs. Reported Maize Yield by Season (2022)", y=1.01)
+fig.tight_layout()
+fig.savefig(os.path.join(plot_dir, "accuracy_scatter_seasonal_2022.pdf"), bbox_inches="tight")
+fig.savefig(os.path.join(plot_dir, "accuracy_scatter_seasonal_2022.png"), bbox_inches="tight", dpi=200)
+print("Wrote accuracy_scatter_seasonal_2022.{pdf,png}")
