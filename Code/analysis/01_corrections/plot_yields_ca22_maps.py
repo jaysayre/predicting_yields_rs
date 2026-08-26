@@ -27,7 +27,7 @@ ADC predictions cover). Those two need a one-line \\includegraphics update each.
   maizeyield_allmx_adc_with_legend.png       "  with colourbar
   maizeyield_adc.png                       CA22 ADC yield, Oaxaca inset
   maizeyield_adc_preds.png                 AEF Hist Ens. Shrink predictions
-  maizeyield_adc_pred_error_prederror_ls_noleg.png      NDVI (masked) error
+  maizeyield_adc_pred_error_prederror_ls_noleg.png      NDVI error
   maizeyield_adc_pred_error_prederror_rcpred_noleg.png  AEF Shrink error  <- best
   maizeyield_adc_pred_error_prederror_munyield.png      SIAP muni-average error
   maizeyield_mun_allmx.png                 CA22 municipal yield, national   (--census-maps only)

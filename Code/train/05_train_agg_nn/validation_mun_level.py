@@ -29,14 +29,14 @@ across rows. Previous published numbers, for reference:
   AEF Hist 3,734/0.713/1.155      AEF Hist Ens. 450/0.730/1.159
 
 UPDATED 2026-08-15: the two unmasked NDVI rows (NDVI Hist. / NDVI Q-Hist.,
-h3 2D-histograms) are replaced by a SINGLE "NDVI (masked)" row built from the
+h3 2D-histograms) are replaced by a SINGLE "NDVI" row built from the
 cropland-masked aefn2 features, now that that panel is complete (4,784/4,784
 batches). Its holdout model comes from train_holdout_validation_models.py
 train_ndvi_masked(), which reads the muni feature cache built by
 analysis/02_accuracy_maize/masked_muni_cv.py.
 
 AEF models' ADC-level predictions are aggregated to the municipality level
-using SIAP agricultural-land area weights; NDVI (masked) predicts at the
+using SIAP agricultural-land area weights; NDVI predicts at the
 municipality level directly. The Agg-NN row uses the development model
 (adc_agg_nn_preds_maize_phase2.parquet, trained on the 80% training
 municipalities only) -- NOT the *_final model, which is retrained on all data
@@ -119,12 +119,12 @@ def mun_preds(pred_file, col):
 # trained with val_muns excluded). Agg-NN phase2 is the development model,
 # already trained on the 80% training municipalities only.
 # 2026-08-15: the two unmasked h3 variants (NDVI Hist. / NDVI Q-Hist.) are folded
-# into a single cropland-masked "NDVI (masked)" row — the aefn2 baseline, which
+# into a single cropland-masked "NDVI" row — the aefn2 baseline, which
 # uses the same per-dim distributional recipe as AEF, so the comparison isolates
 # the embeddings with methodology held fixed.
-MUN_LEVEL = {"NDVI (masked)"}
+MUN_LEVEL = {"NDVI"}
 MODELS = [
-    ("Landsat-derived features", "NDVI (masked)", "mun_aefn2_masked_gb_holdout_preds.parquet", "yield_pred"),
+    ("Landsat-derived features", "NDVI", "mun_aefn2_masked_gb_holdout_preds.parquet", "yield_pred"),
     ("AEF-derived features",     "AEF mean",       "adc_alpha_earth_holdout_preds_maize.parquet", "yield_pred"),
     ("AEF-derived features",     "Agg-NN",         "adc_agg_nn_preds_maize_phase2.parquet",       "yield_pred_agg_nn"),
     ("AEF-derived features",     "AEF Hist",       "adc_aef_hist_gb_holdout_preds.parquet",       "yield_pred"),
@@ -173,7 +173,7 @@ tex = ("\\begin{table}[htbp]\n\\centering\n"
        "municipality-years (the intersection of municipality-years for which all models "
        "produce a prediction), so $N$ is identical across rows. AEF models' ADC-level "
        "predictions are aggregated to the municipality level using agricultural-land-area "
-       "weights; the NDVI (masked) model is trained and scored directly at the "
+       "weights; the NDVI model is trained and scored directly at the "
        "municipality level. The Agg-NN uses its development model (trained on the other "
        "80\\%).}\n"
        "\\label{tab:validation_mun}\n\\begin{tabular}{lrrr}\n\\hline\n"

@@ -26,11 +26,11 @@ out  = os.path.join(proj, "plots", "coauthor_extras_paper")
 # mun-years; from validation_mun_level.py, full 2017-2024 masked panel).
 # Farm-level within-R^2 loaded from the CSV.
 MUN = {"Agg-NN": 0.812, "AEF mean": 0.579, "AEF Hist Ens.": 0.627,
-       "AEF Hist": 0.611, "NDVI (masked)": 0.534}
+       "AEF Hist": 0.611, "NDVI": 0.534}
 cm = pd.read_csv(os.path.join(out, "exante_trust_across_models.csv"))
 FARM = dict(zip(cm["model"], cm["pooled_within_r2"]))
 # AEF RF in Table 1 == the AEF standard model in the within table
-models = ["Agg-NN", "AEF mean", "AEF Hist Ens.", "AEF Hist", "NDVI (masked)"]
+models = ["Agg-NN", "AEF mean", "AEF Hist Ens.", "AEF Hist", "NDVI"]
 
 mun_rank  = {m: r for r, m in enumerate(sorted(models, key=lambda m: -MUN[m]), 1)}
 farm_rank = {m: r for r, m in enumerate(sorted(models, key=lambda m: -FARM[m]), 1)}

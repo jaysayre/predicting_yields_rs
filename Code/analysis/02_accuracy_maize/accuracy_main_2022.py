@@ -116,7 +116,7 @@ ev["siap"] = ev["muncode"].map(ANCHORS["combined"])   # default
 # see harmonic_adc_eval.py). Replaces the old RS CNN + 3-period hist rows.
 # Only the 3-period-window pair is shown; the 2-period and raw-coefficient
 # variants underperform (see harmonic_adc_eval_summary.csv) and are omitted.
-LANDSAT = [("NDVI (masked)","adc_aefn2_masked_preds.parquet","pred")]  # aefn2 masked baseline (replaces h3 NDVI Hist/Q-Hist)
+LANDSAT = [("NDVI","adc_aefn2_masked_preds.parquet","pred")]  # aefn2 masked baseline (replaces h3 NDVI Hist/Q-Hist)
 AEFM    = [("AEF mean","adc_alpha_earth_preds.csv","yield_pred"),
            ("Agg-NN","adc_mlp_yield_preds.csv","pred_yield"),
            ("AEF Hist","adc_aef_hist_gb_preds.parquet","yield_pred"),
@@ -256,7 +256,7 @@ def scatter_panel(ax, y, yh, title):
     ax.set_xlabel("Reported Yield (t/ha)", fontsize=9)
     ax.tick_params(labelsize=8, length=0)
 
-SCATTER = ["NDVI (masked)", "AEF mean", "Agg-NN"]        # raw + corrected pairs
+SCATTER = ["NDVI", "AEF mean", "Agg-NN"]        # raw + corrected pairs
 for m in SCATTER:                                        # corrected columns
     ev[f"_{m}_corr"] = correct(ev, m)
 

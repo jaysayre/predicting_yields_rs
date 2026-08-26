@@ -79,7 +79,7 @@ print(f"  sign-AUC (within-R2 > 0) : {auc:.3f}")
 # ── cross-model: same single index vs EACH model's realized within-skill ──
 # 2026-08-26: single cropland-masked NDVI baseline (aefn2) replaces the two
 # unmasked h3 variants, matching the main accuracy tables.
-MODELS = [("NDVI (masked)", "adc_aefn2_masked_preds.parquet", "pred"),
+MODELS = [("NDVI", "adc_aefn2_masked_preds.parquet", "pred"),
           ("AEF mean", "adc_alpha_earth_preds.csv", "yield_pred"),
           ("Agg-NN", "adc_mlp_yield_preds.csv", "pred_yield"),
           ("AEF Hist", "adc_aef_hist_gb_preds.parquet", "yield_pred"),

@@ -125,7 +125,7 @@ MODELS = [  # (panel label, file, col)
     # 2026-08-16: the two unmasked h3 harmonic variants (NDVI Hist. / NDVI Q-Hist.)
     # are folded into the single cropland-masked aefn2 baseline, matching the
     # accuracy and mun-level tables.
-    ("NDVI (masked)", "adc_aefn2_masked_preds.parquet",        "pred"),
+    ("NDVI", "adc_aefn2_masked_preds.parquet",        "pred"),
     ("AEF mean",         "adc_alpha_earth_preds.csv",          "yield_pred"),
     ("Agg-NN",         "adc_mlp_yield_preds.csv",            "pred_yield"),
     ("AEF Hist",       "adc_aef_hist_gb_preds.parquet",      "yield_pred"),
@@ -140,7 +140,7 @@ for label, f, col in MODELS:
     df = df[["adc", col]].rename(columns={col: label}).dropna().drop_duplicates("adc")
     gt = gt.merge(df, on="adc", how="left")
 
-ORDER = ["NDVI (masked)", "AEF mean", "Agg-NN", "AEF Hist", "AEF Hist Ens.",
+ORDER = ["NDVI", "AEF mean", "Agg-NN", "AEF Hist", "AEF Hist Ens.",
          "Agg-NN (Census-trained)"]
 
 def f3(v):

@@ -20,7 +20,7 @@ predictions cover all years 2017-2024. validation_mun_level.py then scores all
 models on the common held-out municipality-year sample.
 
 Models / outputs (all to Data/predictions/):
-  NDVI (masked)  mun_aefn2_masked_gb_holdout_preds.parquet          (mun-level)
+  NDVI  mun_aefn2_masked_gb_holdout_preds.parquet          (mun-level)
   NDVI Hist.     mun_harmonic_h3_fixed_gb_holdout_preds.parquet     (mun-level, superseded)
   NDVI Q-Hist.   mun_harmonic_h3_quantile_gb_holdout_preds.parquet  (mun-level, superseded)
   AEF mean       adc_alpha_earth_holdout_preds_maize.parquet        (ADC-level)
@@ -154,7 +154,7 @@ def train_ndvi(features):
 
 
 # ============================================================
-# A2. NDVI (masked) — cropland-masked aefn2 features (mun-level HistGB)
+# A2. NDVI — cropland-masked aefn2 features (mun-level HistGB)
 # ============================================================
 # The paper's NDVI baseline as of 2026-08-15: replaces the two unmasked h3
 # variants above with a single row. Features are the ADC-level aefn2 features
@@ -166,7 +166,7 @@ def train_ndvi_masked():
     cache  =  os.path.join(proj_dir, "Data", "cropland_features",
                            "muni_aefn2_masked.parquet")
     if not os.path.exists(cache):
-        print(f"\nNDVI (masked): SKIPPED — {os.path.basename(cache)} not found; "
+        print(f"\nNDVI: SKIPPED — {os.path.basename(cache)} not found; "
               f"run analysis/02_accuracy_maize/masked_muni_cv.py first")
         return
     feats            =  pd.read_parquet(cache)
@@ -179,7 +179,7 @@ def train_ndvi_masked():
 
     tr_df  =  merged[~merged['muncode'].isin(val_muns)]
     va_df  =  merged[merged['muncode'].isin(val_muns)]
-    print(f"\nNDVI (masked): train {len(tr_df):,} mun-years "
+    print(f"\nNDVI: train {len(tr_df):,} mun-years "
           f"({tr_df['muncode'].nunique():,} muns), predict {len(va_df):,} held-out mun-years")
 
     X_tr  =  tr_df[fcols].to_numpy(np.float32)
@@ -391,7 +391,7 @@ def train_ensemble():
 
 if __name__ == '__main__':
     t0  =  time.time()
-    # 'masked' only re-runs the NDVI (masked) row — the others are unchanged and
+    # 'masked' only re-runs the NDVI row — the others are unchanged and
     # each cost many minutes.
     if 'masked' in sys.argv:
         train_ndvi_masked()
