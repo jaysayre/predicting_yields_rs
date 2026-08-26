@@ -26,6 +26,12 @@ The restricted INEGI census microdata cannot be redistributed; scripts that
 evaluate against it require access to the corresponding files under
 `Data/`.
 
+The pipeline has no cross-project dependencies: the cleaned SIAP yield panels
+(`Data/SIAP/Cleaned/siap_ag_prod_estimation_by_season.dta`, `..._ca2007.dta`)
+and the INEGI locality catalog (`Data/INEGI/locality_info.csv`) are vendored
+into the project data directory (2026-08-26; previously read from a separate
+project's Dropbox).
+
 ## Environments
 
 Two conda environments are used, auto-detected by `Code/pipeline.mk`:
