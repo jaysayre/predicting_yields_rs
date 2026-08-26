@@ -16,8 +16,8 @@ from   itertools import product
 ### Directories
 dropbox_dir   =  os.path.join(os.path.expanduser("~"), "Dropbox", "Projects")
 poppy_dir     =  os.path.join(dropbox_dir,  "Maize_prediction")
-crop_sub_dir  =  os.path.join(dropbox_dir,  "The Promise of Crop Substitution")
-siap_dir      =  os.path.join(crop_sub_dir, "data", "SIAP", "Cleaned")
+crop_sub_dir  =  os.path.join(dropbox_dir,  "Maize_prediction")
+siap_dir      =  os.path.join(crop_sub_dir, "Data", "SIAP", "Cleaned")
 joel_dir      =  os.path.join(poppy_dir,    "Data", "predictions")
 py_md_lab_dir =  os.path.join(poppy_dir,    "Data", "INEGI", "MD_lab_outputs")
 ca2022_adc_d  =  os.path.join(py_md_lab_dir,"LM2304-CA22-2025-09-29-superficie_ENTREGA")

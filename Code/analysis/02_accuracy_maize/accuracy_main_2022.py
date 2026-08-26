@@ -77,7 +77,7 @@ ag = pd.read_csv(os.path.join(proj,"Data","SIAP_agland","Output","2007_adcs_agla
 ag["adc"] = ag["adc07"].astype(str).str.replace("-","",regex=False)
 ev = ev.merge(ag[["adc","siap_agland_area"]], on="adc", how="left")
 ev["corr_w"] = np.where(ev["siap_agland_area"] > 0, ev["siap_agland_area"], ev["land_input"])
-siap = pd.read_stata(os.path.join(home,"Dropbox/Projects/The Promise of Crop Substitution/data/SIAP/Cleaned/siap_ag_prod_estimation_by_season.dta"))
+siap = pd.read_stata(os.path.join(home,"Dropbox/Projects/Maize_prediction/Data/SIAP/Cleaned/siap_ag_prod_estimation_by_season.dta"))
 siap["muncode"] = siap["muncode"].apply(lambda x: str(int(x)).zfill(5))
 s22 = siap[(siap["name"]=="Maize")&(siap["year"]==2022)]; s22 = s22[~s22["muncode"].str.endswith("000")]
 

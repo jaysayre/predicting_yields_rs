@@ -53,8 +53,7 @@ inegi_dir  =  os.path.join(data_dir, "INEGI", "MD_lab_outputs",
 sciaga_dir =  os.path.join(home_dir, "Dropbox", "Projects",
                             "Crop_misallocation", "Data")
 siap_pkg   =  os.path.join(home_dir, "Dropbox", "Projects",
-                            "The Promise of Crop Substitution",
-                            "data", "SIAP", "Cleaned")
+                            "Maize_prediction", "Data", "SIAP", "Cleaned")
 
 pred_path   =  os.path.join(preds_dir, "adc_aef_hist_ens_preds.parquet")
 eval_path   =  os.path.join(preds_dir, "adc_aef_hist_ens_eval.parquet")

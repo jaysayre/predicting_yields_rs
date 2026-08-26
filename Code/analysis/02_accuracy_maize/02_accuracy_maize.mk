@@ -52,10 +52,10 @@ $(TABLES_DIR)/accuracy_mun_level_2022.tex: $(TASK_DIR)/mun_survey_improvement.py
 $(PREDS_DIR)/oracle_ceiling_2022.csv: $(TASK_DIR)/oracle_adc_ceiling.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# Census thought-experiment table for ALL models (Table \ref{tab:census_thought}).
-# Correction panels are fully reproducible here; the Agg-NN (Census-trained) panel
-# value comes from the GPU retrain in train/05_train_agg_nn/census_thought_experiment.py.
-$(TABLES_DIR)/census_thought_experiment_2022.tex: $(TASK_DIR)/census_thought_all_models.py
+# Census thought-experiment table for ALL models (Table \ref{tab:census_thought}),
+# including the Agg-NN (Census-trained) panel, which consumes the predictions
+# saved by the retrain in train/05_train_agg_nn/census_thought_experiment.py.
+$(TABLES_DIR)/census_thought_experiment_2022.tex: $(TASK_DIR)/census_thought_all_models.py $(PREDS_DIR)/adc_aggnn_census_trained_preds.parquet
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
 # Within-mun shrinkage applied to ALL models (Shrink rows in the main tables)

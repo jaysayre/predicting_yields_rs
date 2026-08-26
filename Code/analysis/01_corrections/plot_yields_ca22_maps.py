@@ -68,7 +68,7 @@ ens_path    =  os.path.join(pred_dir, "adc_aef_hist_ens_eval.parquet")         #
 ndvi_path   =  os.path.join(pred_dir, "adc_aefn2_masked_preds.parquet")        # masked NDVI baseline preds
 mun_shp     =  os.path.join(data_dir, "muncodes", "shp", "MUNICIPIOS.shp")     # municipality polygons
 siap_path   =  os.path.join(home_dir, "Dropbox", "Projects",
-                            "The Promise of Crop Substitution", "data", "SIAP",
+                            "Maize_prediction", "Data", "SIAP",
                             "Cleaned", "siap_ag_prod_estimation_by_season.dta") # SIAP municipal yields
 
 CENSUS_MAPS =  "--census-maps" in sys.argv   # regenerate the CA07-retained census maps

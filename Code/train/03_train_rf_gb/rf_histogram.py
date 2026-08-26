@@ -36,8 +36,8 @@ pred_dir      =  os.path.join(data_dir, "predictions")
 aef_dir       =  os.path.join(data_dir, "alpha_earth")
 inegi_dir     =  os.path.join(data_dir, "INEGI", "MD_lab_outputs")
 crop_sub_dir  =  os.path.join(home_dir, "Dropbox", "Projects",
-                               "The Promise of Crop Substitution")
-siap_dir      =  os.path.join(crop_sub_dir, "data", "SIAP", "Cleaned")
+                               "Maize_prediction")
+siap_dir      =  os.path.join(crop_sub_dir, "Data", "SIAP", "Cleaned")
 
 
 ### ------------------------------------------------------------------ ###

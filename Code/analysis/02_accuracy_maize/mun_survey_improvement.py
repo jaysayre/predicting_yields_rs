@@ -25,8 +25,7 @@ P    = os.path.join(proj, "Data", "predictions")
 INEGI= os.path.join(proj, "Data", "INEGI", "MD_lab_outputs",
                     "LM2304-CA22-2025-09-29-superficie_ENTREGA")
 agland_path = os.path.join(proj, "Data", "SIAP_agland", "Output", "2007_adcs_agland_area.csv")
-siap_path   = os.path.join(home, "Dropbox", "Projects", "The Promise of Crop Substitution",
-                           "data", "SIAP", "Cleaned", "siap_ag_prod_estimation_by_season.dta")
+siap_path   = os.path.join(home, "Dropbox", "Projects", "Maize_prediction", "Data", "SIAP", "Cleaned", "siap_ag_prod_estimation_by_season.dta")
 table_dir   = os.path.join(proj, "tables")
 os.makedirs(table_dir, exist_ok=True)
 

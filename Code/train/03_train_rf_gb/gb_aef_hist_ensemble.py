@@ -73,8 +73,7 @@ pred_dir   =  os.path.join(proj_dir, "Data", "predictions")
 inegi_dir  =  os.path.join(proj_dir, "Data", "INEGI", "MD_lab_outputs")
 ca2022_dir =  os.path.join(inegi_dir, "LM2304-CA22-2025-09-29-superficie_ENTREGA")
 siap_path  =  os.path.join(home_dir, "Dropbox", "Projects",
-                            "The Promise of Crop Substitution",
-                            "data", "SIAP", "Cleaned",
+                            "Maize_prediction", "Data", "SIAP", "Cleaned",
                             "siap_ag_prod_estimation_by_season.dta")
 
 os.makedirs(pred_dir, exist_ok=True)

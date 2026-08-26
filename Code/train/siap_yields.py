@@ -22,7 +22,7 @@ import os
 import pandas as pd
 
 SIAP_PATH =  os.path.join(os.path.expanduser("~"), "Dropbox", "Projects",
-                          "The Promise of Crop Substitution", "data", "SIAP",
+                          "Maize_prediction", "Data", "SIAP",
                           "Cleaned", "siap_ag_prod_estimation_by_season.dta")
 
 

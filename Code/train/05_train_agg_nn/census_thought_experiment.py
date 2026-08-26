@@ -9,12 +9,20 @@ between-R² should improve. The interesting question is whether within-R²
 Trains 5-seed ensemble with Config B (same as production Agg-NN) using
 INEGI 2022 census municipality yields as the training target.
 
+Saves the ensemble-average ADC-level 2022 predictions to
+Data/predictions/adc_aggnn_census_trained_preds.parquet, which
+analysis/02_accuracy_maize/census_thought_all_models.py consumes to build
+the Agg-NN (Census-trained) panel of Table \ref{tab:census_thought}
+(including its shrink rows). This script no longer writes
+census_thought_experiment_2022.tex itself — that name is owned by
+census_thought_all_models.py.
+
 Usage:
   conda activate ML_env
   python3 census_thought_experiment.py --epochs 300
 
 Author: Jay Sayre
-Date: 2026-02-23
+Date: 2026-02-23 (predictions output added 2026-08-26)
 """
 
 import os
@@ -45,11 +53,12 @@ agland_path   =  os.path.join(data_dir, "SIAP_agland", "Output",
                                "2007_adcs_agland_area.csv")
 inegi_dir     =  os.path.join(data_dir, "INEGI", "MD_lab_outputs")
 crop_sub_dir  =  os.path.join(home_dir, "Dropbox", "Projects",
-                               "The Promise of Crop Substitution")
-siap_dir      =  os.path.join(crop_sub_dir, "data", "SIAP", "Cleaned")
+                               "Maize_prediction")
+siap_dir      =  os.path.join(crop_sub_dir, "Data", "SIAP", "Cleaned")
 plot_dir      =  os.path.join(proj_dir, "plots")
-overleaf_dir  =  os.path.join(home_dir, "Dropbox", "Overleaf",
-                               "Predicting Yields at Scale using RS")
+
+# ── Output ───────────────────────────────────────────────
+preds_out     =  os.path.join(pred_dir, "adc_aggnn_census_trained_preds.parquet")  # ensemble-avg ADC preds, 2022
 
 
 ### ------------------------------------------------------------------ ###
@@ -597,58 +606,14 @@ def main():
           f"N={siap_m['N']:,}")
 
     ### ================================================================ ###
-    ### Generate LaTeX table
+    ### Save ensemble-average ADC predictions (2022) for the table script
     ### ================================================================ ###
 
-    print("\n" + "=" * 70)
-    print("  Generating LaTeX table")
-    print("=" * 70)
-
-    models = [
-        ("AEF RF",                    rf_m),
-        ("Agg-NN (SIAP-trained)",     siap_m),
-        ("Agg-NN (Census-trained)",   census_m),
-    ]
-
-    lines =  []
-    lines.append(r"\begin{table}[htbp]")
-    lines.append(r"\centering")
-    lines.append(r"\caption{Thought experiment: ADC-level yield prediction accuracy "
-                 r"when training on INEGI census municipality yields vs.\ SIAP "
-                 r"municipality yields. All models evaluated against INEGI 2022 "
-                 r"census at the ADC level (combined season).}")
-    lines.append(r"\label{tab:census_thought}")
-    lines.append(r"\begin{tabular}{lrrrrr}")
-    lines.append(r"\hline")
-    lines.append(r"Training data & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\")
-    lines.append(r"\hline")
-
-    for name, m in models:
-        r2_s   =  f"{m['R2']:.3f}"
-        btw_s  =  f"{m['Between_R2']:.3f}"
-        wtn_s  =  f"{m['Within_R2']:.3f}"
-        rmse_s =  f"{m['RMSE']:.3f}"
-        lines.append(f"{name} & {m['N']:,} & {r2_s} & {btw_s} & {wtn_s} & {rmse_s} \\\\")
-
-    lines.append(r"\hline")
-    lines.append(r"\end{tabular}")
-    lines.append(r"\end{table}")
-
-    tex_content =  "\n".join(lines)
-
-    # Save to plots dir
-    tex_path =  os.path.join(plot_dir, "census_thought_experiment_2022.tex")
-    with open(tex_path, 'w') as f:
-        f.write(tex_content + "\n")
-    print(f"  Written: {tex_path}")
-
-    # Also copy to Overleaf
-    overleaf_path =  os.path.join(overleaf_dir, "census_thought_experiment_2022.tex")
-    with open(overleaf_path, 'w') as f:
-        f.write(tex_content + "\n")
-    print(f"  Written: {overleaf_path}")
-
-    print(f"\n{tex_content}")
+    is_2022 =  (aef['year'] == 2022).to_numpy()
+    out_df  =  aef.loc[is_2022, ['adcid', 'year']].copy()
+    out_df['pred'] =  ensemble_avg[is_2022]
+    out_df.to_parquet(preds_out, index=False)
+    print(f"\n  Written: {preds_out} ({len(out_df):,} ADCs)")
 
     print(f"\n  Total runtime: {(time.time()-t0)/60:.1f} min")
     print("\nDone.")

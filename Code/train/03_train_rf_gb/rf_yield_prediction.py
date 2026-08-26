@@ -50,7 +50,7 @@ def run_mexico_maize():
 
     # Load SIAP maize yields (spring-summer)
     siap_path  =  os.path.join(os.path.expanduser("~"), "Dropbox", "Projects",
-                   "The Promise of Crop Substitution", "data", "SIAP", "Cleaned",
+                   "Maize_prediction", "Data", "SIAP", "Cleaned",
                    "siap_ag_prod_estimation_by_season.dta")
     yields_raw =  pd.read_stata(siap_path)
     yields     =  yields_raw[(yields_raw['name'] == 'Maize') &
@@ -278,7 +278,7 @@ def run_mexico_multi_crop():
 
     # Load season-specific SIAP yields (same file as maize pipeline)
     siap_path =  os.path.join(os.path.expanduser("~"), "Dropbox", "Projects",
-                   "The Promise of Crop Substitution", "data", "SIAP", "Cleaned",
+                   "Maize_prediction", "Data", "SIAP", "Cleaned",
                    "siap_ag_prod_estimation_by_season.dta")
     siap      =  pd.read_stata(siap_path)
     print(f"SIAP shape: {siap.shape}")

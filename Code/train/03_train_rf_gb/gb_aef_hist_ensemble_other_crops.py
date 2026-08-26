@@ -57,8 +57,7 @@ ca2022_dir =  os.path.join(inegi_dir, "LM2304-CA22-2025-09-29-superficie_ENTREGA
 overleaf   =  os.path.join(home_dir, "Dropbox", "Overleaf",
                            "Predicting Yields at Scale using RS")
 siap_path  =  os.path.join(home_dir, "Dropbox", "Projects",
-                            "The Promise of Crop Substitution",
-                            "data", "SIAP", "Cleaned",
+                            "Maize_prediction", "Data", "SIAP", "Cleaned",
                             "siap_ag_prod_estimation_by_season.dta")
 
 os.makedirs(pred_dir, exist_ok=True)

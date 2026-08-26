@@ -60,8 +60,7 @@ agland_path=  os.path.join(proj_dir, "Data", "SIAP_agland", "Output",
                            "2007_adcs_agland_area.csv")
 table_dir  =  os.path.join(proj_dir, "tables")
 siap_path  =  os.path.join(home_dir, "Dropbox", "Projects",
-                           "The Promise of Crop Substitution",
-                           "data", "SIAP", "Cleaned",
+                           "Maize_prediction", "Data", "SIAP", "Cleaned",
                            "siap_ag_prod_estimation_by_season.dta")
 os.makedirs(table_dir, exist_ok=True)
 

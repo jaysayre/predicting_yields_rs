@@ -45,8 +45,7 @@ out_dir    =  os.path.join(proj_dir, "plots", "coauthor_extras_paper")
 sciaga_dir =  os.path.join(home_dir, "Dropbox", "Projects",
                             "Crop_misallocation", "Data")
 siap_pkg   =  os.path.join(home_dir, "Dropbox", "Projects",
-                            "The Promise of Crop Substitution",
-                            "data", "SIAP", "Cleaned")
+                            "Maize_prediction", "Data", "SIAP", "Cleaned")
 
 adc_shp     =  os.path.join(sciaga_dir, "SCIAGA", "CA2007_adcloc_poly.shp")
 state_shp   =  os.path.join(sciaga_dir, "Municipality_shp", "STATES.shp")

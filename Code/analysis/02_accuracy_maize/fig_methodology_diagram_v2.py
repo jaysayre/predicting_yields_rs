@@ -77,8 +77,7 @@ aef_dir   =  os.path.join(proj_dir, "Data", "alpha_earth")
 pred_dir  =  os.path.join(proj_dir, "Data", "predictions")
 plot_dir  =  os.path.join(proj_dir, "plots")
 shp_path  =  os.path.join(proj_dir, "Data", "muncodes", "shp", "MUNICIPIOS.shp")
-siap_path =  os.path.join(home_dir, "Dropbox", "Projects", "The Promise of Crop Substitution",
-                          "data", "SIAP", "Cleaned", "siap_ag_prod_estimation_by_season.dta")
+siap_path =  os.path.join(home_dir, "Dropbox", "Projects", "Maize_prediction", "Data", "SIAP", "Cleaned", "siap_ag_prod_estimation_by_season.dta")
 
 hist_path =  os.path.join(aef_dir, "alpha_earth_mex_mun_binned_hist.parquet")
 loyo_path =  os.path.join(pred_dir, "mun_aef_hist_gb_loyo_preds.parquet")
