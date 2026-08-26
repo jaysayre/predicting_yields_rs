@@ -260,6 +260,15 @@ print("Training subsampled bins model...")
 m_bin = HistGradientBoostingRegressor(**cfg)
 m_bin.fit(aug_bin.astype(np.float32), aug_y)
 
+# AEF-mean comparison model (2026-08-26): mun-level means only, same HGB config
+print("Training AEF-mean model...")
+train_mean = mun_mean.merge(siap_train, on=['muncode', 'year'], how='inner')
+m_mean = HistGradientBoostingRegressor(**cfg)
+m_mean.fit(
+    train_mean[mean_cols].fillna(0).values.astype(np.float32),
+    train_mean['yield'].values
+)
+
 
 # -- 3. Predict on CIMMYT plot-level features ----------------
 print("\nGenerating plot-level predictions...")
@@ -270,9 +279,11 @@ pred_pct = m_pct.predict(
     cimmyt_combo[pct_combined].fillna(0).values.astype(np.float32)
 ).clip(0)
 
-cimmyt_combo['pred_bin'] =  pred_bin
-cimmyt_combo['pred_pct'] =  pred_pct
-cimmyt_combo['pred']     =  W_BIN * pred_bin + (1 - W_BIN) * pred_pct
+cimmyt_combo['pred_bin']  =  pred_bin
+cimmyt_combo['pred_pct']  =  pred_pct
+cimmyt_combo['pred']      =  W_BIN * pred_bin + (1 - W_BIN) * pred_pct
+cimmyt_combo['pred_mean'] =  m_mean.predict(
+    cimmyt_combo[mean_cols].fillna(0).values.astype(np.float32)).clip(0)
 
 
 # -- 4. Load CIMMYT yield data and merge --------------------
@@ -318,9 +329,20 @@ cy = cy[keep_cols].copy()
 
 # Merge with predictions
 df = cy.merge(
-    cimmyt_combo[['plot_id', 'year', 'pred', 'pred_bin', 'pred_pct', 'muncode']],
+    cimmyt_combo[['plot_id', 'year', 'pred', 'pred_bin', 'pred_pct', 'pred_mean',
+                  'muncode']],
     on=['plot_id', 'year'], how='inner'
 )
+
+# NDVI 3-period histogram predictions at CIMMYT plots (unmasked h3 recipe;
+# the paper's masked aefn2 baseline has no plot-level extraction)
+_ndvi = pd.read_parquet(os.path.join(proj_dir, "Data", "predictions",
+                                     "cimmyt_3period_hist_gb_preds.parquet"))
+_ndvi = _ndvi[_ndvi['feature_set'] == 'raw'].copy()
+_ndvi['plot_id'] = _ndvi['plot_id'].astype(str)
+df = df.merge(_ndvi.rename(columns={'yield_pred': 'pred_ndvi'})
+              [['plot_id', 'year', 'pred_ndvi']],
+              on=['plot_id', 'year'], how='left')
 print(f"  Matched plot-years: {len(df):,}")
 print(f"  Unique plots:       {df['plot_id'].nunique():,}")
 print(f"  Unique muns:        {df['muncode'].nunique():,}")
@@ -657,10 +679,13 @@ if len(has_siap2) > 100:
 #            baseline (zero within-mun skill by construction). The gap in
 #            within-R2 is the model's marginal plot-level skill beyond the
 #            municipal anchor. A cluster-bootstrap CI is attached to it.
-#   Panel B  Municipal-level aggregation (pred vs SIAP, CIMMYT vs SIAP).
-# Ratio-stratified panels are intentionally excluded: they condition on the
-# ground truth (ratio = yield_cimmyt/yield_siap) and their subset R2 is
-# largely mechanical rather than evidence of model skill.
+#   Panel B  Plot-level accuracy by CIMMYT/SIAP representativeness ratio
+#            (2026-08-26, coauthor request). Caveat kept in the table note:
+#            the ratio conditions on the ground truth, so band-level R2 is
+#            descriptive (where the model tracks yields) rather than
+#            independent evidence of skill. The municipal-level aggregation
+#            rows (pred vs SIAP 0.598/0.778, CIMMYT vs SIAP 0.723) moved to
+#            prose; they are still printed above.
 print(f"\n{'='*110}")
 print("WRITING PAPER TABLE (tab:cimmyt_profile)")
 print(f"{'='*110}")
@@ -674,6 +699,19 @@ def _fmt(x, d=3):
 
 # Panel A rows
 _ens = eval_group(_tbl, 'AEF Hist Ensemble', ycol='yield_cimmyt', pcol='pred')
+# Shrink row (2026-08-26): within-municipality shrinkage exactly as deployed in
+# the ADC pipeline — lambda = 0.669 cross-validated on the census evaluation,
+# i.e. fixed ex-ante with respect to the CIMMYT data. Deviations are taken
+# from the municipality-year mean prediction (deployable: uses predictions only).
+_LAM_DEPLOY = 0.669
+_gm = _tbl.groupby(['muncode', 'year'])['pred'].transform('mean')
+_tbl['pred_shrink'] = _gm + _LAM_DEPLOY * (_tbl['pred'] - _gm)
+_ens_sh = eval_group(_tbl, 'AEF Hist Ensemble Shrink',
+                     ycol='yield_cimmyt', pcol='pred_shrink')
+_hist = eval_group(_tbl, 'AEF Hist', ycol='yield_cimmyt', pcol='pred_pct')
+_mean = eval_group(_tbl, 'AEF mean', ycol='yield_cimmyt', pcol='pred_mean')
+_ndvi_row = eval_group(_tbl, 'NDVI 3-Period Hist.\\ (unmasked)',
+                       ycol='yield_cimmyt', pcol='pred_ndvi')
 _base = eval_group(_tbl, 'SIAP mun-mean (naive baseline)',
                    ycol='yield_cimmyt', pcol='yield_siap')
 _wtn_lo, _wtn_hi = boot_ci_within(_tbl, 'yield_cimmyt', 'pred', B=N_BOOT)
@@ -703,16 +741,31 @@ _tex = r"""\begin{table}[!ht]
 _tex += (f"AEF Hist Ensemble & {_ens['N']:,} & {_fmt(_ens['R2'])} & "
          f"{_fmt(_ens['Btw'])} & {_fmt(_ens['Wtn'])} & {_fmt(_ens['Pearson'])} & "
          f"{_fmt(_ens['Spearman'])} \\\\\n")
+_tex += (f"AEF Hist Ensemble Shrink & {_ens_sh['N']:,} & {_fmt(_ens_sh['R2'])} & "
+         f"{_fmt(_ens_sh['Btw'])} & {_fmt(_ens_sh['Wtn'])} & {_fmt(_ens_sh['Pearson'])} & "
+         f"{_fmt(_ens_sh['Spearman'])} \\\\\n")
+for _r in [_hist, _mean, _ndvi_row]:
+    if _r is not None:
+        _tex += (f"{_r['label']} & {_r['N']:,} & {_fmt(_r['R2'])} & "
+                 f"{_fmt(_r['Btw'])} & {_fmt(_r['Wtn'])} & {_fmt(_r['Pearson'])} & "
+                 f"{_fmt(_r['Spearman'])} \\\\\n")
 _tex += (f"SIAP mun-mean (naive baseline) & {_base['N']:,} & {_fmt(_base['R2'])} & "
          f"{_fmt(_base['Btw'])} & {_fmt(_base['Wtn'])} & {_fmt(_base['Pearson'])} & "
          f"{_fmt(_base['Spearman'])} \\\\\n")
 _tex += r"""\addlinespace
-\multicolumn{7}{l}{\textit{Panel B: Municipal-level aggregation}} \\
+\multicolumn{7}{l}{\textit{Panel B: By CIMMYT/SIAP representativeness ratio}} \\
 """
-_tex += (f"Pred vs SIAP (mun-level) & {len(_mun):,} & {_fmt(_r2_ps)} & --- & --- & "
-         f"{_fmt(_r_ps)} & --- \\\\\n")
-_tex += (f"CIMMYT vs SIAP (mun-level) & {len(_mun):,} & --- & --- & --- & "
-         f"{_fmt(_r_cs)} & --- \\\\\n")
+_tbl['_ratio'] = _tbl['yield_cimmyt'] / _tbl['yield_siap']
+_BANDS = [(r"Ratio $<$ 0.9 (below mun.\ avg.)",   0.0, 0.9),
+          (r"Ratio 0.9--1.3 (near mun.\ avg.)",  0.9, 1.3),
+          (r"Ratio 1.3--2.0",                     1.3, 2.0),
+          (r"Ratio $>$ 2.0 (management premium)", 2.0, np.inf)]
+for _lbl, _lo, _hi in _BANDS:
+    _sub = _tbl[(_tbl['_ratio'] >= _lo) & (_tbl['_ratio'] < _hi)]
+    _row = eval_group(_sub, _lbl, ycol='yield_cimmyt', pcol='pred')
+    _tex += (f"{_lbl} & {_row['N']:,} & {_fmt(_row['R2'])} & "
+             f"{_fmt(_row['Btw'])} & {_fmt(_row['Wtn'])} & {_fmt(_row['Pearson'])} & "
+             f"{_fmt(_row['Spearman'])} \\\\\n")
 _tex += r"""\bottomrule
 \end{tabular}
 \par\smallskip
@@ -731,7 +784,17 @@ _tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to CIMMYT plot-level AEF features
          r"$ (95\% CI ["
          f"{_wtn_lo:.3f}, {_wtn_hi:.3f}"
          r"], municipality-cluster bootstrap) is the model's marginal plot-level skill "
-         r"beyond the municipal anchor. Panel B compares municipality-level means.}"
+         r"beyond the municipal anchor. The Shrink row applies the within-municipality "
+         r"shrinkage exactly as deployed in the ADC pipeline ($\lambda = 0.669$, "
+         r"cross-validated on the census evaluation and hence fixed ex ante with "
+         r"respect to the CIMMYT data). The NDVI row applies the Landsat 3-period "
+         r"histogram model (unmasked; the paper's cropland-masked NDVI baseline has no "
+         r"plot-level feature extraction). Panel B stratifies plots by the ratio of the "
+         r"plot's CIMMYT yield to its SIAP municipal average; because this ratio "
+         r"conditions on the realized yield, band-level $R^2$ is descriptive---locating "
+         r"where predictions track yields---rather than independent evidence of skill: "
+         r"the model is accurate where plot yields are representative of their "
+         r"municipality and degrades where management-driven premiums dominate.}"
          "\n\\end{table}\n")
 
 for _dest in [os.path.join(table_dir, "accuracy_cimmyt_profile.tex"),
