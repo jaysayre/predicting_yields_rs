@@ -53,13 +53,17 @@ sm = sm[~sm['muncode'].str.endswith('000')].groupby('muncode').agg(
     q=('q', 'sum'), ha=('ha_planted', 'sum')).reset_index()
 sm['yield_siap'] = sm['q'] / sm['ha']
 
-AGG = [  # (label, file, col) — NDVI row is the cropland-masked aefn2 baseline
-         # (partial_masked_mun_train_adc_eval.py); it replaced the two unmasked
-         # h3 harmonic variants on 2026-08-15.
-    ("NDVI (masked)\\ (agg.)", "adc_aefn2_masked_preds.parquet",        "pred"),
-    ("AEF mean (agg.)",  "adc_alpha_earth_preds.csv",          "yield_pred"),
-    ("AEF Hist Ens.\\ (agg.)","adc_aef_hist_ens_preds.parquet",    "pred"),
-    ("Agg-NN (agg.)",        "adc_mlp_yield_preds.csv",            "pred_yield"),
+AGG = [  # (label, file, col, shrink_lambda) — NDVI row is the cropland-masked
+         # aefn2 baseline (partial_masked_mun_train_adc_eval.py); it replaced the
+         # two unmasked h3 harmonic variants on 2026-08-15. shrink_lambda is each
+         # model's cross-validated within-municipality lambda from the main
+         # accuracy tables (combined season); the Shrink (agg.) rows (2026-08-26)
+         # aggregate the shrunk ADC predictions with the same ex-ante weights.
+    ("NDVI (masked)\\ (agg.)", "adc_aefn2_masked_preds.parquet",     "pred",       0.417),
+    ("AEF mean (agg.)",       "adc_alpha_earth_preds.csv",       "yield_pred", 0.558),
+    ("AEF Hist (agg.)",       "adc_aef_hist_gb_preds.parquet",   "yield_pred", 0.608),
+    ("AEF Hist Ens.\\ (agg.)", "adc_aef_hist_ens_preds.parquet",  "pred",       0.669),
+    ("Agg-NN (agg.)",         "adc_mlp_yield_preds.csv",         "pred_yield", 0.296),
 ]
 def load(f, col):
     d = pd.read_parquet(os.path.join(P, f)) if f.endswith("parquet") else pd.read_csv(os.path.join(P, f))
@@ -69,16 +73,23 @@ def load(f, col):
     return d[['adc', col]].dropna().drop_duplicates('adc')
 
 panelA, panelB = [], []   # (label, N, R2, RMSE)
-for label, f, col in AGG:
+for label, f, col, lam in AGG:
     d = ca.merge(load(f, col).rename(columns={col: 'p'}), on='adc', how='inner')
-    d = d[d[WEIGHT] > 0].copy(); d['Q'] = d['p'] * d[WEIGHT]
-    g = d.groupby('muncode').agg(Q=('Q', 'sum'), w=(WEIGHT, 'sum'),
-                                 vol=('vol_output', 'sum'), la=('land_input', 'sum')).reset_index()
-    g['pred'] = g['Q'] / g['w']; g['census'] = g['vol'] / g['la']
-    g = g.merge(sm[['muncode', 'yield_siap']], on='muncode', how='left')
-    a = g.dropna(subset=['census', 'pred']); b = g.dropna(subset=['yield_siap', 'pred'])
-    panelA.append((label, len(a), r2(a['census'], a['pred']), rmse(a['census'], a['pred'])))
-    panelB.append((label, len(b), r2(b['yield_siap'], b['pred']), rmse(b['yield_siap'], b['pred'])))
+    d = d[d[WEIGHT] > 0].copy()
+    # within-municipality shrinkage of the ADC predictions (deployable: uses
+    # predictions only), then the same ex-ante weighted aggregation
+    gm = d.groupby('muncode')['p'].transform('mean')
+    d['p_sh'] = gm + lam * (d['p'] - gm)
+    for sub_lab, pc in [(label, 'p'),
+                        (label.replace(' (agg.)', ' Shrink (agg.)'), 'p_sh')]:
+        d['Q'] = d[pc] * d[WEIGHT]
+        g = d.groupby('muncode').agg(Q=('Q', 'sum'), w=(WEIGHT, 'sum'),
+                                     vol=('vol_output', 'sum'), la=('land_input', 'sum')).reset_index()
+        g['pred'] = g['Q'] / g['w']; g['census'] = g['vol'] / g['la']
+        g = g.merge(sm[['muncode', 'yield_siap']], on='muncode', how='left')
+        a = g.dropna(subset=['census', 'pred']); b = g.dropna(subset=['yield_siap', 'pred'])
+        panelA.append((sub_lab, len(a), r2(a['census'], a['pred']), rmse(a['census'], a['pred'])))
+        panelB.append((sub_lab, len(b), r2(b['yield_siap'], b['pred']), rmse(b['yield_siap'], b['pred'])))
 
 # NDVI (masked) GB (mun): trained directly at municipality level, random muni-year K-fold CV (no aggregation weight)
 # Source switched 2026-08-15 from the unmasked h3 model to the masked aefn2 model (masked_muni_cv.py).
@@ -100,8 +111,12 @@ panelB.append(("INEGI Census (agg.)", len(bench), r2(bench['yield_siap'], bench[
 
 # order: Landsat (NDVI masked agg, mun-trained GB), AEF (mean, Hist Ens, Agg-NN), benchmark
 def reorder(rows, last):
-    order = ["NDVI (masked)\\ (agg.)", "NDVI (masked)\\ GB (mun.)",
-             "AEF mean (agg.)", "AEF Hist Ens.\\ (agg.)", "Agg-NN (agg.)", last]
+    order = ["NDVI (masked)\\ (agg.)", "NDVI (masked)\\ Shrink (agg.)",
+             "NDVI (masked)\\ GB (mun.)",
+             "AEF mean (agg.)", "AEF mean Shrink (agg.)",
+             "AEF Hist (agg.)", "AEF Hist Shrink (agg.)",
+             "AEF Hist Ens.\\ (agg.)", "AEF Hist Ens.\\ Shrink (agg.)",
+             "Agg-NN (agg.)", "Agg-NN Shrink (agg.)", last]
     return sorted([r for r in rows], key=lambda r: order.index(r[0]) if r[0] in order else 99)
 panelA = reorder(panelA, "SIAP Mun.\\ Avg.")
 panelB = reorder(panelB, "INEGI Census (agg.)")
@@ -119,7 +134,10 @@ L = [r"\begin{table}[htbp]", r"\centering",
      r"\caption{Municipality-level maize yield prediction results, 2022. ADC-level predictions are "
      r"aggregated to the municipality level weighting each ADC by its \emph{ex-ante} agricultural-land "
      r"area (a proxy for maize area that does not use the census), except NDVI (masked)\ GB (mun.), which is "
-     r"trained directly at the municipality level (random municipality-year cross-validation).}", r"\label{tab:mun_agg_results}",
+     r"trained directly at the municipality level (random municipality-year cross-validation). "
+     r"Shrink (agg.)\ rows first apply each model's within-municipality shrinkage exactly as in the "
+     r"main accuracy tables (cross-validated $\lambda$, deployable from predictions alone), then "
+     r"aggregate the shrunk ADC predictions with the same ex-ante weights.}", r"\label{tab:mun_agg_results}",
      r"\begin{tabular}{lrrr}", r"\hline",
      r"\multicolumn{4}{l}{\textit{Panel A: vs.\ INEGI Census (aggregated)}} \\", r"\hline",
      r"Model & $N$ & $R^2$ & RMSE \\", r"\hline"] + fmt(panelA) + [r"\hline",
