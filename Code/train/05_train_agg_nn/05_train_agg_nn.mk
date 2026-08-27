@@ -1,5 +1,6 @@
 ### 05_train_agg_nn.mk
 # Train aggregation-constrained NN on AEF embeddings
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
 TASK_DIR := $(CODE_DIR)/train/05_train_agg_nn

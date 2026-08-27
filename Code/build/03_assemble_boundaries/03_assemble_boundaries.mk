@@ -1,5 +1,6 @@
 ### 03_assemble_boundaries.mk
 # Assemble geographic boundaries (ADC shapefiles, agland masks)
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
 TASK_DIR := $(CODE_DIR)/build/03_assemble_boundaries

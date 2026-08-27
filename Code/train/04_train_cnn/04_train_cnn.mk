@@ -1,5 +1,6 @@
 ### 04_train_cnn.mk
 # Train CNN on NDVI histograms (baseline + improved + temporal)
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
 TASK_DIR := $(CODE_DIR)/train/04_train_cnn

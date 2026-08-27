@@ -1,5 +1,6 @@
 ### 02_clean_siap_monthly.mk
 # Clean SIAP monthly production data
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
 TASK_DIR := $(CODE_DIR)/build/02_clean_siap_monthly

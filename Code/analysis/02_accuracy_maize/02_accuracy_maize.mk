@@ -1,5 +1,6 @@
 ### 02_accuracy_maize.mk
 # Maize accuracy evaluation → Tables 1–3, Figures 4 & 7
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 #
 # Tables produced here and \input{} by the paper:
 #   1_accuracy_metrics_2022.ipynb  -> accuracy_{combined,fall_winter,spring_summer,mun_level}_2022.tex

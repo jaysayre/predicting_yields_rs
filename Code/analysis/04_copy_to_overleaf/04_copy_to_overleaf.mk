@@ -1,5 +1,6 @@
 ### 04_copy_to_overleaf.mk
 # Copy all tables and figures to Overleaf directory
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR   := $(PROJ_DIR)/Code
 PLOTS_DIR  := $(DATA_DIR)/plots

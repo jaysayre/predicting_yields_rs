@@ -1,5 +1,6 @@
 ### 03_train_rf_gb.mk
 # Train RF/GB yield models on AEF embeddings (primary method)
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
 TASK_DIR := $(CODE_DIR)/train/03_train_rf_gb

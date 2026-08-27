@@ -1,5 +1,6 @@
 ### 01_corrections.mk
 # Post-prediction corrections (additive, GP, irrigation)
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
 TASK_DIR := $(CODE_DIR)/analysis/01_corrections

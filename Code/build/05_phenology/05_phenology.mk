@@ -1,5 +1,6 @@
 ### 05_phenology.mk
 # Determine crop seasonality (match NDVI phenology to SIAP months)
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
 TASK_DIR := $(CODE_DIR)/build/05_phenology

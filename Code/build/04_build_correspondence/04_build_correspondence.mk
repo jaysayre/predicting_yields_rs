@@ -1,5 +1,6 @@
 ### 04_build_correspondence.mk
 # Build ADC correspondence tables (2007↔2016)
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
 TASK_DIR := $(CODE_DIR)/build/04_build_correspondence

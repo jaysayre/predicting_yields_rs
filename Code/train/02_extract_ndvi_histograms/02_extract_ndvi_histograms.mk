@@ -1,5 +1,6 @@
 ### 02_extract_ndvi_histograms.mk
 # Extract Landsat NDVI histograms from Google Earth Engine
+SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 # MANUAL: Requires Earth Engine authentication
 
 CODE_DIR := $(PROJ_DIR)/Code
