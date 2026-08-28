@@ -333,15 +333,6 @@ df = cy.merge(
     on=['plot_id', 'year'], how='inner'
 )
 
-# NDVI 3-period histogram predictions at CIMMYT plots (unmasked h3 recipe;
-# the paper's masked aefn2 baseline has no plot-level extraction)
-_ndvi = pd.read_parquet(os.path.join(proj_dir, "Data", "predictions",
-                                     "cimmyt_3period_hist_gb_preds.parquet"))
-_ndvi = _ndvi[_ndvi['feature_set'] == 'raw'].copy()
-_ndvi['plot_id'] = _ndvi['plot_id'].astype(str)
-df = df.merge(_ndvi.rename(columns={'yield_pred': 'pred_ndvi'})
-              [['plot_id', 'year', 'pred_ndvi']],
-              on=['plot_id', 'year'], how='left')
 print(f"  Matched plot-years: {len(df):,}")
 print(f"  Unique plots:       {df['plot_id'].nunique():,}")
 print(f"  Unique muns:        {df['muncode'].nunique():,}")
@@ -698,19 +689,16 @@ def _fmt(x, d=3):
 
 # Panel A rows
 _ens = eval_group(_tbl, 'AEF Hist Ensemble', ycol='yield_cimmyt', pcol='pred')
-# Shrink row (2026-08-26): within-municipality shrinkage exactly as deployed in
-# the ADC pipeline — lambda = 0.669 cross-validated on the census evaluation,
-# i.e. fixed ex-ante with respect to the CIMMYT data. Deviations are taken
-# from the municipality-year mean prediction (deployable: uses predictions only).
-_LAM_DEPLOY = 0.669
+# Shrink row: within-municipality shrinkage exactly as deployed in the ADC
+# pipeline — a-priori lambda = 2/3 (Sec 3.6), fixed ex-ante with respect to the
+# CIMMYT data. Deviations from the municipality-year mean prediction.
+_LAM_DEPLOY = 2/3
 _gm = _tbl.groupby(['muncode', 'year'])['pred'].transform('mean')
 _tbl['pred_shrink'] = _gm + _LAM_DEPLOY * (_tbl['pred'] - _gm)
 _ens_sh = eval_group(_tbl, 'AEF Hist Ensemble Shrink',
                      ycol='yield_cimmyt', pcol='pred_shrink')
 _hist = eval_group(_tbl, 'AEF Hist', ycol='yield_cimmyt', pcol='pred_pct')
 _mean = eval_group(_tbl, 'AEF mean', ycol='yield_cimmyt', pcol='pred_mean')
-_ndvi_row = eval_group(_tbl, 'NDVI 3-Period Hist.\\ (unmasked)',
-                       ycol='yield_cimmyt', pcol='pred_ndvi')
 _base = eval_group(_tbl, 'SIAP Mun.\\ Avg.\\ (naive)',
                    ycol='yield_cimmyt', pcol='yield_siap')
 _wtn_lo, _wtn_hi = boot_ci_within(_tbl, 'yield_cimmyt', 'pred', B=N_BOOT)
@@ -743,7 +731,7 @@ _tex += (f"AEF Hist Ens. & {_ens['N']:,} & {_fmt(_ens['R2'])} & "
 _tex += (f"AEF Hist Ens.\\ Shrink & {_ens_sh['N']:,} & {_fmt(_ens_sh['R2'])} & "
          f"{_fmt(_ens_sh['Btw'])} & {_fmt(_ens_sh['Wtn'])} & {_fmt(_ens_sh['Pearson'])} & "
          f"{_fmt(_ens_sh['Spearman'])} \\\\\n")
-for _r in [_hist, _mean, _ndvi_row]:
+for _r in [_hist, _mean]:
     if _r is not None:
         _tex += (f"{_r['label']} & {_r['N']:,} & {_fmt(_r['R2'])} & "
                  f"{_fmt(_r['Btw'])} & {_fmt(_r['Wtn'])} & {_fmt(_r['Pearson'])} & "
@@ -752,53 +740,48 @@ _tex += (f"SIAP Mun.\\ Avg.\\ (naive) & {_base['N']:,} & {_fmt(_base['R2'])} & "
          f"{_fmt(_base['Btw'])} & {_fmt(_base['Wtn'])} & {_fmt(_base['Pearson'])} & "
          f"{_fmt(_base['Spearman'])} \\\\\n")
 _tex += r"""\addlinespace
-\multicolumn{7}{l}{\textit{Panel B: By CIMMYT/SIAP representativeness ratio}} \\
+\multicolumn{7}{l}{\textit{Panel B: By municipality mean CIMMYT/SIAP ratio (AEF Hist Ens.\ Shrink)}} \\
 """
-_tbl['_ratio'] = _tbl['yield_cimmyt'] / _tbl['yield_siap']
-_BANDS = [(r"Ratio $<$ 0.9 (below mun.\ avg.)",   0.0, 0.9),
-          (r"Ratio 0.9--1.3 (near mun.\ avg.)",  0.9, 1.3),
-          (r"Ratio 1.3--2.0",                     1.3, 2.0),
-          (r"Ratio $>$ 2.0 (management premium)", 2.0, np.inf)]
+# Bands defined at the MUNICIPALITY level (mean CIMMYT yield / SIAP yield per
+# mun-year), NOT each plot's own ratio: plot-level conditioning selects on the
+# realized outcome and mechanically destroys within-mun R2 (2026-08-28).
+# Evaluated with the deployed Shrink predictions.
+_mr = _tbl.groupby(['muncode', 'year']).apply(
+    lambda g: g['yield_cimmyt'].mean() / g['yield_siap'].iloc[0]).rename('_mratio').reset_index()
+_tbl = _tbl.merge(_mr, on=['muncode', 'year'], how='left')
+_BANDS = [(r"Mun.\ ratio $<$ 0.9 (below avg.)",       0.0, 0.9),
+          (r"Mun.\ ratio 0.9--1.3 (representative)",  0.9, 1.3),
+          (r"Mun.\ ratio 1.3--2.0",                    1.3, 2.0),
+          (r"Mun.\ ratio $>$ 2.0 (management premium)", 2.0, np.inf)]
 for _lbl, _lo, _hi in _BANDS:
-    _sub = _tbl[(_tbl['_ratio'] >= _lo) & (_tbl['_ratio'] < _hi)]
-    _row = eval_group(_sub, _lbl, ycol='yield_cimmyt', pcol='pred')
+    _sub = _tbl[(_tbl['_mratio'] >= _lo) & (_tbl['_mratio'] < _hi)]
+    _row = eval_group(_sub, _lbl, ycol='yield_cimmyt', pcol='pred_shrink')
     _tex += (f"{_lbl} & {_row['N']:,} & {_fmt(_row['R2'])} & "
              f"{_fmt(_row['Btw'])} & {_fmt(_row['Wtn'])} & {_fmt(_row['Pearson'])} & "
              f"{_fmt(_row['Spearman'])} \\\\\n")
 _tex += r"""\bottomrule
 \end{tabular}
 \par\smallskip
-\footnotesize{Notes: AEF Hist Ensemble trained on SIAP municipality-level maize yields (Spring--Summer, """
-_tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to CIMMYT plot-level AEF features "
-         r"extracted at 10\,m resolution. CIMMYT yields are self-reported from managed "
-         r"farmer trial plots; observations outside a plausible "
+\footnotesize{Notes: models trained on SIAP municipal Spring--Summer maize yields ("""
+_tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to plot-level AEF features. CIMMYT yields "
+         r"are self-reported; observations outside "
          f"{CLEAN_LO}--{CLEAN_HI}"
-         r"\,t/ha range ($\approx$"
+         r"\,t/ha ($\approx$"
          f"{_drop_pct:.1f}"
-         r"\% of maize-grain plot observations, reflecting evident data-entry errors up to 16{,}600\,t/ha) "
-         r"are excluded. Because the fields are small relative to the land-cover product "
-         r"(median 1.6\,ha), 28\% of matched plot-years contain no ESA WorldCover cropland "
-         r"pixels inside the plot boundary and thus carry empty AEF features (the model "
-         r"receives a zero vector); results are insensitive to these plots---excluding them "
-         r"leaves the within-municipality correlation essentially unchanged (0.435 vs.\ 0.426). "
-         r"Between- and within-$R^2$ use municipality groupings. The naive "
-         r"baseline assigns every plot its SIAP municipal mean and therefore has zero "
-         r"within-municipality skill by construction; the ensemble's within-$R^2 = "
+         r"\%, evident data-entry errors) are excluded, and 28\% of matched plot-years "
+         r"contain no WorldCover cropland pixels inside the plot polygon (empty features); "
+         r"results are insensitive to excluding the latter. Between- and within-$R^2$ use "
+         r"municipality groupings. The naive baseline assigns every plot its SIAP "
+         r"municipal mean, so its within-$R^2$ is zero by construction; the ensemble's "
+         r"within-$R^2 = "
          f"{_ens['Wtn']:.3f}"
-         r"$ (95\% CI ["
+         r"$ [95\% CI "
          f"{_wtn_lo:.3f}, {_wtn_hi:.3f}"
-         r"], municipality-cluster bootstrap) is the model's marginal plot-level skill "
-         r"beyond the municipal anchor. The Shrink row applies the within-municipality "
-         r"shrinkage exactly as deployed in the ADC pipeline ($\lambda = 0.669$, "
-         r"cross-validated on the census evaluation and hence fixed ex ante with "
-         r"respect to the CIMMYT data). The NDVI row applies the Landsat 3-period "
-         r"histogram model (unmasked; the paper's cropland-masked NDVI baseline has no "
-         r"plot-level feature extraction). Panel B stratifies plots by the ratio of the "
-         r"plot's CIMMYT yield to its SIAP municipal average; because this ratio "
-         r"conditions on the realized yield, band-level $R^2$ is descriptive---locating "
-         r"where predictions track yields---rather than independent evidence of skill: "
-         r"the model is accurate where plot yields are representative of their "
-         r"municipality and degrades where management-driven premiums dominate.}"
+         r"] is its marginal plot-level skill beyond the municipal anchor. The Shrink row "
+         r"applies the deployed $\lambda = 2/3$ (Section~\ref{sec:shrink}), fixed ex ante "
+         r"with respect to the CIMMYT data. Panel B groups plots by their "
+         r"municipality-year's mean CIMMYT-to-SIAP yield ratio, an indicator of how "
+         r"representative local trial yields are of area averages.}"
          "\n\\end{table}\n")
 
 for _dest in [os.path.join(table_dir, "accuracy_cimmyt_profile.tex"),
