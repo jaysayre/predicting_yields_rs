@@ -214,6 +214,18 @@ def main():
     # ── ADC-level predictions (best model) ───────────────
     base_map(adc, "pred_shrink", "maizeyield_adc_preds.png", 0, 12, legend=True)
 
+    # ── Matched-sample truth vs prediction pair (2026-08-28) ──
+    # Both panels restricted to ADCs carrying BOTH a CA22 census maize yield and
+    # an ensemble prediction, so the pair is directly comparable; every other
+    # polygon renders silver in both panels. Replaces the CA07 truth map in the
+    # paper's truth-vs-prediction figure.
+    _m = adc["yield"].notna() & adc["pred_shrink"].notna()
+    adc["yield_matched"] = np.where(_m, adc["yield"], np.nan)
+    adc["pred_matched"]  = np.where(_m, adc["pred_shrink"], np.nan)
+    print(f"    matched truth/pred pair: {int(_m.sum()):,} ADCs")
+    base_map(adc, "yield_matched", "maizeyield_adc_truth_2022_matched.png", 0, 12, legend=True)
+    base_map(adc, "pred_matched",  "maizeyield_adc_preds_2022_matched.png", 0, 12, legend=True)
+
     # ── Prediction-error maps ────────────────────────────
     print("[6] error maps")
     ERR =  dict(vmin=-4, vmax=4, cmap="RdBu_r")

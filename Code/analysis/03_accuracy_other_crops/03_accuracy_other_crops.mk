@@ -24,3 +24,9 @@ $(TABLES_DIR)/accuracy_other_crops_adc_2022.tex: $(TRAIN_DIR)/gb_aef_hist_ensemb
 .PHONY: accuracy_other_crops_legacy_nb
 accuracy_other_crops_legacy_nb:
 	cd $(DATA_DIR) && $(MPC_ENV) $(NB_EXEC) $(TASK_DIR)/1_accuracy_other_crops_2022.ipynb
+
+# Municipality-level other-crops table with EX-ANTE agland weights (replaces
+# the legacy census-planted-weight version, 2026-08-28)
+.PHONY: other_crops_mun
+other_crops_mun: $(TASK_DIR)/other_crops_mun_agg.py
+	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
