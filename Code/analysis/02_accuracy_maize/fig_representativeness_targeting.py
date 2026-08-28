@@ -20,7 +20,7 @@ Inputs (under ~/Dropbox/Projects/Maize_prediction/):
   Data/predictions/adc_aef_hist_ens_eval.parquet           -- ADC yield + pred
   plots/coauthor_extras_paper/exante_trust_index.csv       -- per-mun ex-ante features
 Output:
-  plots/coauthor_extras_paper/fig_representativeness_targeting.png
+  plots/coauthor_extras_paper/fig_representativeness_targeting.pdf (pgf/Times)
 
 Run:  ~/miniforge3/envs/geo_env/bin/python fig_representativeness_targeting.py
 """
@@ -28,8 +28,38 @@ import os
 import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
-import matplotlib
-matplotlib.use("Agg")
+import matplotlib as mpl
+mpl.use("pgf")  # typeset via LaTeX/pgf -> Times, matching the paper body
+base_font_size = 12  # match \documentclass[12pt]{article}
+from cycler import cycler
+mpl.rcParams.update({
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,
+    "font.family": "serif",
+    "font.serif": ["Times"],
+    "axes.unicode_minus": False,
+    "font.size": base_font_size,
+    "axes.titlesize": base_font_size + 3,
+    "axes.labelsize": base_font_size + 2,
+    "xtick.labelsize": base_font_size,
+    "ytick.labelsize": base_font_size,
+    "legend.fontsize": base_font_size,
+    "figure.titlesize": base_font_size + 3,
+    "axes.facecolor": "white",
+    "figure.facecolor": "white",
+    "axes.edgecolor": "#404040",
+    "axes.labelcolor": "#404040",
+    "xtick.color": "#404040",
+    "ytick.color": "#404040",
+    "grid.color": "#D0D0D0",
+    "grid.linestyle": (0, (1, 3)),
+    "grid.linewidth": 0.6,
+    "axes.prop_cycle": cycler(color=["#4A4A4A"]),
+    "pgf.preamble": r"""
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+""",
+})
 import matplotlib.pyplot as plt
 
 home_dir  =  os.path.expanduser("~")
@@ -106,6 +136,6 @@ axes[0].legend(fontsize=9, loc='upper left', framealpha=0.9)
 fig.suptitle("Ex-ante targeting: the downscaling method resolves within-area variation "
              "where heterogeneity is agro-ecological", fontsize=12, y=1.02)
 fig.tight_layout()
-out = os.path.join(plot_dir, "fig_representativeness_targeting.png")
-fig.savefig(out, dpi=150, bbox_inches='tight')
+out = os.path.join(plot_dir, "fig_representativeness_targeting.pdf")
+fig.savefig(out, bbox_inches='tight')
 print(f"\nWrote {out}")

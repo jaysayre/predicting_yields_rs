@@ -332,8 +332,8 @@ def main():
     agland['agland_share'] =  (agland['siap_agland_area'] /
                                 agland['adc_area']).replace(
                                     [np.inf, -np.inf], np.nan).fillna(0.0).clip(0, 1)
-    agland =  agland[['adc07', 'irrig_share', 'log_adc_area', 'agland_share',
-                       'siap_agland_area']].rename(columns={'adc07': 'adcid'})
+    agland =  agland[['adcid', 'irrig_share', 'log_adc_area', 'agland_share',
+                       'siap_agland_area']]
 
     aef =  aef.merge(agland, on='adcid', how='left')
     aef['irrig_share']      =  aef['irrig_share'].fillna(0.0)

@@ -96,7 +96,7 @@ gt = pd.read_parquet(os.path.join(pred_dir, "adc_aef_hist_ens_eval.parquet"))
 gt = gt[["adc", "muncode", "yield", "land_input", "pred"]].dropna(subset=["yield"]).copy()
 # ex-ante agricultural-land proxy for the correction weight (not census land_input)
 _ag = pd.read_csv(os.path.join(proj_dir, "Data", "SIAP_agland", "Output", "2007_adcs_agland_area.csv"))
-_ag["adc"] = _ag["adc07"].astype(str).str.replace("-", "", regex=False)
+_ag["adc"] = _ag["adcid"].astype(str).str.replace("-", "", regex=False)
 gt = gt.merge(_ag[["adc", "siap_agland_area"]], on="adc", how="left")
 gt["w"] = np.where(gt["siap_agland_area"] > 0, gt["siap_agland_area"],
                    np.where(gt["land_input"] > 0, gt["land_input"], 1.0))

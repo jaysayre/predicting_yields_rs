@@ -138,7 +138,7 @@ def load_gt():
         ['adc', 'muncode', 'yield']].rename(columns={'yield': 'yield_pv'})
     gt =  gt.merge(gt_pv, on=['adc', 'muncode'], how='left')
     agland =  pd.read_csv(agland_path)
-    agland['adc'] =  agland['adc07'].astype(str).str.replace('-', '', regex=False)
+    agland['adc'] =  agland['adcid'].astype(str).str.replace('-', '', regex=False)
     gt =  gt.merge(agland[['adc', 'siap_agland_area']], on='adc', how='left')
     gt['corr_w'] =  np.where(gt['siap_agland_area'] > 0, gt['siap_agland_area'],
                              gt['land_input'])

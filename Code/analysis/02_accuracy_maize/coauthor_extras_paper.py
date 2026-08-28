@@ -205,7 +205,7 @@ t1["corr_pv"]    =  plot_t1("yield_pv", "err_corr_pv",
 # ────────────────────────────────────────────────────────
 print("\n=== Task 2: mun-err vs ADC-err ===")
 agland  =  pd.read_csv(agland_csv)
-agland["muncode"]  =  agland["adc07"].str[:5]
+agland["muncode"]  =  agland["adcid"].str[:5]
 
 def plot_t2(ycol, pcol, pcol_err, title, fname):
     d  =  df[df[ycol].notna() & df[pcol].notna()].copy()

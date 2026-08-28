@@ -97,8 +97,8 @@ def load_adc_features():
 def aggregate_to_muni(adc, feat):
     """Area-weighted ADC->muni-year mean of each feature (weight = SIAP ag-land
     area proxy; equal weight where missing)."""
-    ag =  pd.read_csv(agland_path, usecols=["adc07", "siap_agland_area"])
-    ag["adc"] =  ag["adc07"].astype(str).str.replace("-", "", regex=False)
+    ag =  pd.read_csv(agland_path, usecols=["adcid", "siap_agland_area"])
+    ag["adc"] =  ag["adcid"].astype(str).str.replace("-", "", regex=False)
     w =  adc.merge(ag[["adc", "siap_agland_area"]], on="adc", how="left")
     med =  w["siap_agland_area"].median()
     w["wt"] =  w["siap_agland_area"].fillna(med).clip(lower=1e-6)
@@ -123,7 +123,7 @@ def load_gt():
         ["adc", "muncode", "yield"]].rename(columns={"yield": "yield_pv"})
     gt =  gt.merge(pv, on=["adc", "muncode"], how="left")
     ag =  pd.read_csv(agland_path)
-    ag["adc"] =  ag["adc07"].astype(str).str.replace("-", "", regex=False)
+    ag["adc"] =  ag["adcid"].astype(str).str.replace("-", "", regex=False)
     gt =  gt.merge(ag[["adc", "siap_agland_area"]], on="adc", how="left")
     gt["corr_w"] =  np.where(gt["siap_agland_area"] > 0, gt["siap_agland_area"],
                             gt["land_input"])

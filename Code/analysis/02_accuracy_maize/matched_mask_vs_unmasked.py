@@ -70,7 +70,7 @@ def load_gt():
     pv = szn[(szn["name"] == "Maize") & (szn["type"] == "p-v")][
         ["adc", "muncode", "yield"]].rename(columns={"yield": "yield_pv"})
     gt = gt.merge(pv, on=["adc", "muncode"], how="left")
-    ag = pd.read_csv(agland); ag["adc"] = ag["adc07"].astype(str).str.replace("-", "", regex=False)
+    ag = pd.read_csv(agland); ag["adc"] = ag["adcid"].astype(str).str.replace("-", "", regex=False)
     gt = gt.merge(ag[["adc", "siap_agland_area"]], on="adc", how="left")
     gt["corr_w"] = np.where(gt["siap_agland_area"] > 0, gt["siap_agland_area"], gt["land_input"])
     gt["adc"] = gt["adc"].astype(str)
@@ -102,8 +102,8 @@ def masked_preds(yields):
     adc["muncode"] = adc["adcid"].str[:5]
     feat = [c for c in adc.columns if c not in META]
     adc = adc.dropna(subset=feat, how="all").drop_duplicates(["adc", "year"])
-    ag = pd.read_csv(agland, usecols=["adc07", "siap_agland_area"])
-    ag["adc"] = ag["adc07"].astype(str).str.replace("-", "", regex=False)
+    ag = pd.read_csv(agland, usecols=["adcid", "siap_agland_area"])
+    ag["adc"] = ag["adcid"].astype(str).str.replace("-", "", regex=False)
     w = adc.merge(ag, on="adc", how="left")
     w["wt"] = w["siap_agland_area"].fillna(w["siap_agland_area"].median()).clip(lower=1e-6)
     wf = pd.DataFrame(w[feat].to_numpy(float) * w["wt"].to_numpy(float)[:, None], columns=feat)

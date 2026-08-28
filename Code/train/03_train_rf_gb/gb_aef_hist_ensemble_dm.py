@@ -320,7 +320,7 @@ df = gt.merge(adc_combo[['adc', 'pred', 'pred_bin_only']], on='adc', how='left')
 
 agland = pd.read_csv(os.path.join(proj_dir, "Data", "SIAP_agland", "Output",
                                   "2007_adcs_agland_area.csv"))
-agland['adc'] = agland['adc07'].astype(str).str.replace('-', '', regex=False)
+agland['adc'] = agland['adcid'].astype(str).str.replace('-', '', regex=False)
 df = df.merge(agland[['adc', 'siap_agland_area']], on='adc', how='left')
 df['corr_w'] = np.where(df['siap_agland_area'] > 0, df['siap_agland_area'],
                         df['land_input'])

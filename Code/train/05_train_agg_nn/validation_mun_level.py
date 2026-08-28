@@ -74,7 +74,7 @@ aef = pd.read_parquet(os.path.join(aef_dir, "alpha_earth_mex_adcs.parquet"),
                       columns=['adcid', 'year'])
 aef['muncode'] = aef['adcid'].str[:5]
 
-ag = pd.read_csv(agland_path).rename(columns={'adc07': 'adcid'})
+ag = pd.read_csv(agland_path)
 ag['w'] = np.where(ag['siap_agland_area'] > 0, ag['siap_agland_area'], 1.0)
 aef = aef.merge(ag[['adcid', 'w']], on='adcid', how='left')
 aef['w'] = aef['w'].fillna(1.0)

@@ -40,7 +40,7 @@ def fmt(v):
 
 ca   =  pd.read_stata(os.path.join(INEGI, "adc_land_use_ca22_adc07.dta"))
 ag   =  pd.read_csv(agland_path)
-ag["adc"] =  ag["adc07"].astype(str).str.replace("-", "", regex=False)
+ag["adc"] =  ag["adcid"].astype(str).str.replace("-", "", regex=False)
 siap =  pd.read_stata(siap_path)
 siap["muncode"] =  siap["muncode"].apply(lambda x: str(int(x)).zfill(5))
 

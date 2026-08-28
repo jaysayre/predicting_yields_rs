@@ -59,6 +59,12 @@ szn = pd.read_stata(os.path.join(ca22, "adc_land_szn_ca22_adc07.dta"))
 pv = szn[(szn["name"]=="Maize")&(szn["type"]=="p-v")][["adc","yield"]].rename(columns={"yield":"yield_pv"})
 gt = gt.merge(pv, on="adc", how="left")
 d  = X.merge(gt, on="adc", how="inner")
+# Restrict to the ensemble-eligible sample (2026-08-28): the main tables now
+# evaluate every model on the ADCs where the AEF Hist Ensemble is defined
+# (>=1 cropland pixel), so the oracle ceiling is scored on the same sample.
+_ens = pd.read_parquet(os.path.join(pred, "adc_aef_hist_ens_eval.parquet"))
+_ok  = set(_ens.loc[_ens["pred"].notna(), "adc"])
+d    = d[d["adc"].isin(_ok)].copy()
 
 def oracle(df, ycol, label):
     s = df[df[ycol].notna()].copy()

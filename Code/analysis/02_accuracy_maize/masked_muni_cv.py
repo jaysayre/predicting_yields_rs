@@ -92,8 +92,8 @@ def build_muni_features():
     print(f"    {len(adc):,} ADC-years | {len(feat)} features | "
           f"years {sorted(adc['year'].unique())}")
 
-    ag =  pd.read_csv(agland_path, usecols=["adc07", "siap_agland_area"])
-    ag["adc"] =  ag["adc07"].astype(str).str.replace("-", "", regex=False)
+    ag =  pd.read_csv(agland_path, usecols=["adcid", "siap_agland_area"])
+    ag["adc"] =  ag["adcid"].astype(str).str.replace("-", "", regex=False)
     w =  adc.merge(ag[["adc", "siap_agland_area"]], on="adc", how="left")
     med =  w["siap_agland_area"].median()
     w["wt"] =  w["siap_agland_area"].fillna(med).clip(lower=1e-6)

@@ -7,14 +7,44 @@ illustrating why aggregate metrics mislead for downscaling.
 Municipality-level R^2 from Table 1 (held-out municipalities, vs SIAP); farm-level
 pooled within-municipality R^2 from exante_trust_across_models.csv.
 
-Output: plots/coauthor_extras_paper/fig_ranking_inversion.png
+Output: plots/coauthor_extras_paper/fig_ranking_inversion.pdf (pgf/Times)
 Run:    ~/miniforge3/envs/geo_env/bin/python fig_ranking_inversion.py
 """
 import os
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")
+import matplotlib as mpl
+mpl.use("pgf")  # typeset via LaTeX/pgf -> Times, matching the paper body
+base_font_size = 12  # match \documentclass[12pt]{article}
+from cycler import cycler
+mpl.rcParams.update({
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,
+    "font.family": "serif",
+    "font.serif": ["Times"],
+    "axes.unicode_minus": False,
+    "font.size": base_font_size,
+    "axes.titlesize": base_font_size + 3,
+    "axes.labelsize": base_font_size + 2,
+    "xtick.labelsize": base_font_size,
+    "ytick.labelsize": base_font_size,
+    "legend.fontsize": base_font_size,
+    "figure.titlesize": base_font_size + 3,
+    "axes.facecolor": "white",
+    "figure.facecolor": "white",
+    "axes.edgecolor": "#404040",
+    "axes.labelcolor": "#404040",
+    "xtick.color": "#404040",
+    "ytick.color": "#404040",
+    "grid.color": "#D0D0D0",
+    "grid.linestyle": (0, (1, 3)),
+    "grid.linewidth": 0.6,
+    "axes.prop_cycle": cycler(color=["#4A4A4A"]),
+    "pgf.preamble": r"""
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+""",
+})
 import matplotlib.pyplot as plt
 
 home = os.path.expanduser("~")
@@ -35,8 +65,6 @@ models = ["Agg-NN", "AEF mean", "AEF Hist Ens.", "AEF Hist", "NDVI"]
 mun_rank  = {m: r for r, m in enumerate(sorted(models, key=lambda m: -MUN[m]), 1)}
 farm_rank = {m: r for r, m in enumerate(sorted(models, key=lambda m: -FARM[m]), 1)}
 
-plt.rcParams.update({"font.family": "serif", "axes.edgecolor": "#404040",
-                     "xtick.color": "#404040", "ytick.color": "#404040"})
 fig, ax = plt.subplots(figsize=(7.2, 5.0))
 x0, x1 = 0.0, 1.0
 for m in models:
@@ -66,8 +94,8 @@ for s in ["top", "right"]:
     ax.spines[s].set_visible(False)
 ax.tick_params(length=0)
 fig.tight_layout()
-p = os.path.join(out, "fig_ranking_inversion.png")
-fig.savefig(p, dpi=150, bbox_inches="tight")
+p = os.path.join(out, "fig_ranking_inversion.pdf")
+fig.savefig(p, bbox_inches="tight")
 print("Wrote", p)
 print("mun ranks:", mun_rank)
 print("farm ranks:", farm_rank)

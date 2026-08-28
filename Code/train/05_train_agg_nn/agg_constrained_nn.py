@@ -391,8 +391,8 @@ def main():
     agland['agland_share'] =  (agland['siap_agland_area'] /
                                 agland['adc_area']).replace(
                                     [np.inf, -np.inf], np.nan).fillna(0.0).clip(0, 1)
-    agland =  agland[['adc07', 'irrig_share', 'log_adc_area', 'agland_share',
-                       'siap_agland_area']].rename(columns={'adc07': 'adcid'})
+    agland =  agland[['adcid', 'irrig_share', 'log_adc_area', 'agland_share',
+                       'siap_agland_area']]
 
     # Merge
     aef =  aef.merge(agland, on='adcid', how='left')
@@ -803,7 +803,7 @@ def main():
     agland_eval['irrig_share'] =  (agland_eval['siap_irrig_area'] /
                                     agland_eval['siap_agland_area']).replace(
                                         [np.inf, -np.inf], np.nan).fillna(0.0)
-    agland_eval['adc'] =  agland_eval['adc07'].str.replace('-', '', regex=False)
+    agland_eval['adc'] =  agland_eval['adcid'].str.replace('-', '', regex=False)
     eval_df =  eval_df.merge(agland_eval[['adc', 'irrig_share']].rename(
         columns={'irrig_share': 'irrig_share_siap'}), on='adc', how='left')
     eval_df['irrig_share_siap'] =  eval_df['irrig_share_siap'].fillna(0.0)

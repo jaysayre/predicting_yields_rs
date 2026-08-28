@@ -86,6 +86,10 @@ def correct(df, pcol, gc="muncode"):
 # ── data ────────────────────────────────────────────────
 ev = pd.read_parquet(os.path.join(P, "adc_aef_hist_ens_eval.parquet"))
 ev = ev[["adc","muncode","yield","yield_pv","land_input","pred"]].rename(columns={"pred":"AEF Hist Ens."})
+# Main tables are evaluated on the ensemble-eligible sample only (2026-08-28):
+# ADCs with zero ESA WorldCover cropland pixels have all-null masked features,
+# so other models' "coverage" there is nominal (AEF Hist R2 = -0.045 on them).
+ev = ev[ev["AEF Hist Ens."].notna()].copy()
 # fall-winter (O-I) ground truth
 ca2022_dir = os.path.join(proj, "Data", "INEGI", "MD_lab_outputs",
                           "LM2304-CA22-2025-09-29-superficie_ENTREGA")
@@ -93,7 +97,7 @@ ca_szn = pd.read_stata(os.path.join(ca2022_dir, "adc_land_szn_ca22_adc07.dta"))
 oi = ca_szn[(ca_szn["name"] == "Maize") & (ca_szn["type"] == "o-i")][["adc", "yield"]].rename(columns={"yield": "yield_oi"})
 ev = ev.merge(oi, on="adc", how="left")
 ag = pd.read_csv(os.path.join(proj,"Data","SIAP_agland","Output","2007_adcs_agland_area.csv"))
-ag["adc"] = ag["adc07"].astype(str).str.replace("-","",regex=False)
+ag["adc"] = ag["adcid"].astype(str).str.replace("-","",regex=False)
 ev = ev.merge(ag[["adc","siap_agland_area"]], on="adc", how="left")
 ev["corr_w"] = np.where(ev["siap_agland_area"] > 0, ev["siap_agland_area"], ev["land_input"])
 siap = pd.read_stata(os.path.join(home,"Dropbox/Projects/Maize_prediction/Data/SIAP/Cleaned/siap_ag_prod_estimation_by_season.dta"))
@@ -175,7 +179,9 @@ def build_table(season_y, label_season, fname, tag, show_ci=True):
          rf"ADC level --- {label_season}. Corrected rows use ex-ante agricultural-land "
          rf"weights for the municipal anchor, and the anchor is the SIAP municipal "
          rf"maize yield for {ANCHOR_NOTE[tag]}, matching the census target scored "
-         rf"here.{ci_note} RMSE in t/ha.{orc_note}}}",
+         rf"here. All rows are evaluated on the ADCs for which the AEF Hist "
+         rf"Ensemble is defined (at least one cropland pixel; see the sample "
+         rf"accounting in the appendix).{ci_note} RMSE in t/ha.{orc_note}}}",
          rf"\label{{tab:accuracy_{tag}}}", r"\footnotesize", r"\begin{tabular}{lrrrrr}", r"\hline",
          r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline",
          r"\multicolumn{6}{l}{\textit{Landsat-derived features}} \\"]

@@ -143,7 +143,7 @@ d = ev.merge(emb[['adc'] + mean_cols], on='adc', how='left')
 
 # agland → irrigation share + log area (within-mun deviation features)
 ag = pd.read_csv(agland_path)
-ag['adc'] = ag['adc07'].str.replace('-', '', regex=False)
+ag['adc'] = ag['adcid'].str.replace('-', '', regex=False)
 ag['irrig_share'] = (ag['siap_irrig_area'] / ag['siap_agland_area']
                      ).replace([np.inf, -np.inf], np.nan).fillna(0.0)
 ag['log_adc_area'] = np.log1p(ag['adc_area'].clip(lower=0))

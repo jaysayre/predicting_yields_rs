@@ -41,7 +41,7 @@ def rmse(a, b):
 # census ADC base + ex-ante agland proxy
 ca = pd.read_stata(os.path.join(INEGI, "adc_land_use_ca22_adc07.dta"))
 ca = ca[ca['name'] == 'Maize'][['adc', 'muncode', 'land_input', 'vol_output']].copy()
-ag = pd.read_csv(agland_path); ag['adc'] = ag['adc07'].astype(str).str.replace('-', '', regex=False)
+ag = pd.read_csv(agland_path); ag['adc'] = ag['adcid'].astype(str).str.replace('-', '', regex=False)
 ca = ca.merge(ag[['adc', WEIGHT]], on='adc', how='left')
 
 # SIAP 2022 maize municipal yield

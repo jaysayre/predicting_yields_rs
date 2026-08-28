@@ -52,11 +52,11 @@ agland['irrig_share'] =  agland['irrig_share'].replace([np.inf, -np.inf], np.nan
 # Fill NaN irrig_share with 0 (ADCs with no SIAP agland → likely non-agricultural)
 agland['irrig_share'] =  agland['irrig_share'].fillna(0.0)
 
-# Create muncode from adc07
-agland['muncode'] =  agland['adc07'].str[:5]
+# Create muncode from adcid
+agland['muncode'] =  agland['adcid'].str[:5]
 
 # Also create dash-free version for matching with INEGI 2022
-agland['adc_nodash'] =  agland['adc07'].str.replace('-', '', regex=False)
+agland['adc_nodash'] =  agland['adcid'].str.replace('-', '', regex=False)
 
 print(f"  Loaded {len(agland):,} ADCs from agland data")
 print(f"  irrig_share: mean={agland['irrig_share'].mean():.3f}, "
@@ -92,7 +92,7 @@ print(f"  Yield: mean={ca2007_pv['yield'].mean():.2f}, median={ca2007_pv['yield'
 # Merge with agland to get irrigation share
 ca2007_pv['adc_nodash'] =  ca2007_pv['adc'].str.replace('-', '', regex=False)
 ca2007_merged =  ca2007_pv.merge(
-    agland[['adc07', 'irrig_share', 'irrig_share_dev']].rename(columns={'adc07': 'adc'}),
+    agland[['adcid', 'irrig_share', 'irrig_share_dev']].rename(columns={'adcid': 'adc'}),
     on='adc', how='inner'
 )
 
@@ -138,9 +138,9 @@ rf_preds =  pd.read_parquet(os.path.join(pred_dir, "adc_alpha_earth_preds_maize.
 rf_preds['muncode'] =  rf_preds['adcid'].str[:5]
 print(f"  RF predictions: {len(rf_preds):,} ADC-year obs")
 
-# Merge with irrig_share (using adc07 = adcid format)
+# Merge with irrig_share (using adcid = adcid format)
 rf_adj =  rf_preds.merge(
-    agland[['adc07', 'irrig_share', 'irrig_share_dev']].rename(columns={'adc07': 'adcid'}),
+    agland[['adcid', 'irrig_share', 'irrig_share_dev']],
     on='adcid', how='left'
 )
 

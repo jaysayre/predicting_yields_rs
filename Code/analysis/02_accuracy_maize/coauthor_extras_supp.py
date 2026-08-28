@@ -345,7 +345,7 @@ print(f"  CSV: state_accuracy.csv   LaTeX: state_accuracy.tex (not copied to Ove
 # ────────────────────────────────────────────────────────
 print("\n=== 10. 2D within-R² heatmaps ===")
 agland  =  pd.read_csv(agland_csv)
-agland["muncode"]  =  agland["adc07"].str[:5]
+agland["muncode"]  =  agland["adcid"].str[:5]
 mun_ag  =  (agland.groupby("muncode", as_index=False)
                    .agg(siap_irrig_area=("siap_irrig_area", "sum"),
                         siap_agland_area=("siap_agland_area", "sum")))

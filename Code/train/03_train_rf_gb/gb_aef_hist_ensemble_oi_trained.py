@@ -104,7 +104,7 @@ df =  gt.merge(combo[["adc", "pred"]], on="adc", how="left").dropna(subset=["y",
 df["muncode"] =  df["muncode"].astype(str).str.zfill(5)
 
 # O-I SIAP anchor + agland weights for correction
-ag =  pd.read_csv(agland_path); ag["adc"] =  ag["adc07"].astype(str).str.replace("-", "", regex=False)
+ag =  pd.read_csv(agland_path); ag["adc"] =  ag["adcid"].astype(str).str.replace("-", "", regex=False)
 df =  df.merge(ag[["adc", "siap_agland_area"]], on="adc", how="left")
 df["w"] =  np.where(df["siap_agland_area"] > 0, df["siap_agland_area"], 1.0)
 sm22 =  siap[(siap["name"] == "Maize") & (siap["growing_season"] == "Fall-Winter") &
