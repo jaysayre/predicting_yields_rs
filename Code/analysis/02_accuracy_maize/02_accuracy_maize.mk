@@ -99,3 +99,9 @@ $(TABLES_DIR)/accuracy_cimmyt_profile.tex: $(TASK_DIR)/accuracy_cimmyt_profile.p
 .PHONY: robustness_stats
 robustness_stats: $(TASK_DIR)/robustness_lambda_ci_qbin.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
+# Sample-size accounting + census-free lambda gauge (Sec 3.6, appendix N note,
+# CIMMYT counts). Writes lambda_cimmyt_ncounts.json.
+.PHONY: sample_accounting
+sample_accounting: $(TASK_DIR)/sample_accounting_and_lambda.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
