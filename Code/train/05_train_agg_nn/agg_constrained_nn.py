@@ -347,6 +347,12 @@ def main():
                         help='L2 penalty on residuals (default: 0.01)')
     parser.add_argument('--weight_decay', type=float, default=1e-4,
                         help='Weight decay (default: 1e-4)')
+    parser.add_argument('--inner_es', action='store_true',
+                        help='Hold 10%% of the TRAINING municipalities for early '
+                             'stopping (validation municipalities never influence '
+                             'any training choice), refit on the full training set '
+                             'for the selected epoch count, write '
+                             '*_inner_es.parquet, and exit (no full-data retrain).')
     parser.add_argument('--seed', type=int, default=42)
     args =  parser.parse_args()
 
@@ -516,6 +522,92 @@ def main():
     scaler.fit(all_features[train_row_idxs])
     features_scaled =  scaler.transform(all_features).astype(np.float32)
     print(f"  Scaler fit on {len(train_row_idxs):,} training ADC-year obs")
+
+    ### ---------------------------------------------------------------- ###
+    ### Inner-early-stopping mode (clean held-out protocol, 2026-08-28)
+    ### ---------------------------------------------------------------- ###
+    # The dev model early-stops on val_muns -- the same municipalities Table 1
+    # scores -- so its stopping epoch is selected on the evaluation set. This
+    # mode removes that asymmetry: early stopping uses a 10% slice of the
+    # TRAINING municipalities, the model is then refit on the full training set
+    # for the selected epoch count, and the validation municipalities never
+    # influence any choice.
+    if args.inner_es:
+        input_dim =  len(all_feat_cols)
+        rng_in =  np.random.default_rng(args.seed + 1)
+        tm =  sorted(train_muns)
+        rng_in.shuffle(tm)
+        n_in =  int(0.9 * len(tm))
+        inner_train_muns =  set(tm[:n_in])
+        inner_stop_muns  =  set(tm[n_in:])
+        inner_train_keys =  [k for k in train_keys if k[0] in inner_train_muns]
+        inner_stop_keys  =  [k for k in train_keys if k[0] in inner_stop_muns]
+        print(f"\n--- Inner-ES training: {len(inner_train_keys):,} train / "
+              f"{len(inner_stop_keys):,} stop mun-years ---")
+        model =  ResidualMLP(input_dim, args.hidden_dim, args.n_blocks,
+                             dropout=0.2).to(device)
+        _, stopped_epoch =  train_model(
+            model, inner_train_keys, inner_stop_keys, grouped, features_scaled,
+            all_weights, all_rf_preds, siap_dict, args, device)
+        print(f"\n--- Refit on all {len(train_keys):,} training mun-years "
+              f"for {stopped_epoch} epochs ---")
+        refit =  ResidualMLP(input_dim, args.hidden_dim, args.n_blocks,
+                             dropout=0.2).to(device)
+        optimizer =  torch.optim.Adam(refit.parameters(), lr=args.lr,
+                                      weight_decay=args.weight_decay)
+        scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, patience=15, factor=0.5, min_lr=1e-6)
+        tk =  list(train_keys)
+        for ep in range(stopped_epoch):
+            refit.train()
+            np.random.shuffle(tk)
+            epoch_losses =  []
+            for batch_start in range(0, len(tk), args.batch_size):
+                batch_keys =  tk[batch_start:batch_start + args.batch_size]
+                X_flat, W_flat, RF_flat, mun_idx, Y =  build_flat_batch(
+                    batch_keys, grouped, features_scaled, all_weights,
+                    all_rf_preds, siap_dict, max_adcs=args.max_adcs)
+                X_flat  =  X_flat.to(device);  W_flat  =  W_flat.to(device)
+                RF_flat =  RF_flat.to(device); mun_idx =  mun_idx.to(device)
+                Y       =  Y.to(device)
+                if X_flat.shape[0] < 2:
+                    continue
+                optimizer.zero_grad()
+                residuals =  torch.tanh(refit(X_flat)) * args.max_residual
+                adc_pred  =  (RF_flat + residuals).clamp(min=0)
+                mun_pred  =  aggregate_predictions(adc_pred, W_flat, mun_idx,
+                                                   len(batch_keys))
+                mse_loss  =  nn.functional.mse_loss(mun_pred, Y)
+                loss =  mse_loss + args.residual_lambda * (residuals ** 2).mean()
+                if args.var_lambda > 0:
+                    loss =  loss - args.var_lambda * compute_var_penalty(
+                        adc_pred, mun_idx, len(batch_keys))
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(refit.parameters(), max_norm=5.0)
+                optimizer.step()
+                epoch_losses.append(mse_loss.item())
+            scheduler.step(np.mean(epoch_losses))
+            if (ep + 1) % 25 == 0:
+                print(f"  Epoch {ep+1:3d}: loss={np.mean(epoch_losses):.4f}")
+        refit.eval()
+        chunk_size =  50000
+        all_preds  =  np.zeros(len(features_scaled))
+        with torch.no_grad():
+            for start in range(0, len(features_scaled), chunk_size):
+                end       =  min(start + chunk_size, len(features_scaled))
+                X_chunk   =  torch.from_numpy(features_scaled[start:end]).to(device)
+                RF_chunk  =  torch.from_numpy(all_rf_preds[start:end]).to(device)
+                residuals =  torch.tanh(refit(X_chunk)) * args.max_residual
+                all_preds[start:end] =  (RF_chunk + residuals).clamp(
+                    min=0, max=25).cpu().numpy()
+        aef['yield_pred_agg_nn'] =  all_preds
+        suffix =  "phase3" if args.phase3 else "phase2"
+        os.makedirs(pred_dir, exist_ok=True)
+        out_path =  os.path.join(
+            pred_dir, f"adc_agg_nn_preds_maize_{suffix}_inner_es.parquet")
+        aef[['adcid', 'year', 'yield_pred_agg_nn']].to_parquet(out_path, index=False)
+        print(f"  Saved: {out_path}")
+        return
 
     ### ---------------------------------------------------------------- ###
     ### Train model

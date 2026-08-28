@@ -25,7 +25,7 @@ out  = os.path.join(proj, "plots", "coauthor_extras_paper")
 # held-out municipalities excluded, scored on the common N=3,571 held-out
 # mun-years; from validation_mun_level.py, full 2017-2024 masked panel).
 # Farm-level within-R^2 loaded from the CSV.
-MUN = {"Agg-NN": 0.812, "AEF mean": 0.579, "AEF Hist Ens.": 0.627,
+MUN = {"Agg-NN": 0.790, "AEF mean": 0.579, "AEF Hist Ens.": 0.627,
        "AEF Hist": 0.611, "NDVI": 0.534}
 cm = pd.read_csv(os.path.join(out, "exante_trust_across_models.csv"))
 FARM = dict(zip(cm["model"], cm["pooled_within_r2"]))
