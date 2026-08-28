@@ -197,7 +197,7 @@ def build_table(season_y, label_season, fname, tag):
     sb = ev.assign(_siap=ev["siap"])
     n, ov, bt, wt, rm = met(sb, season_y, "_siap")
     L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{Benchmark}} \\",
-          f"SIAP & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\"]
+          f"SIAP Mun.\\ Avg. & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\"]
     sci = boot_ci(sb, season_y, "_siap")
     if sci:
         (olo, ohi), _ = sci
@@ -249,7 +249,7 @@ def build_common_sample_table(season_y, label_season, fname, tag):
     cs["_siap"] =  cs["siap"]
     n, ov, bt, wt, rm =  met(cs, season_y, "_siap")
     L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{Benchmark}} \\",
-          f"SIAP & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\",
+          f"SIAP Mun.\\ Avg. & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\",
           r"\hline", r"\end{tabular}", r"\end{table}", ""]
     out = os.path.join(plot_dir, fname)
     with open(out, "w") as f: f.write("\n".join(L))

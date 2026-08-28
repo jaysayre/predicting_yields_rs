@@ -711,7 +711,7 @@ _hist = eval_group(_tbl, 'AEF Hist', ycol='yield_cimmyt', pcol='pred_pct')
 _mean = eval_group(_tbl, 'AEF mean', ycol='yield_cimmyt', pcol='pred_mean')
 _ndvi_row = eval_group(_tbl, 'NDVI 3-Period Hist.\\ (unmasked)',
                        ycol='yield_cimmyt', pcol='pred_ndvi')
-_base = eval_group(_tbl, 'SIAP mun-mean (naive baseline)',
+_base = eval_group(_tbl, 'SIAP Mun.\\ Avg.\\ (naive)',
                    ycol='yield_cimmyt', pcol='yield_siap')
 _wtn_lo, _wtn_hi = boot_ci_within(_tbl, 'yield_cimmyt', 'pred', B=N_BOOT)
 
@@ -737,10 +737,10 @@ _tex = r"""\begin{table}[!ht]
 \midrule
 \multicolumn{7}{l}{\textit{Panel A: Plot-level accuracy}} \\
 """
-_tex += (f"AEF Hist Ensemble & {_ens['N']:,} & {_fmt(_ens['R2'])} & "
+_tex += (f"AEF Hist Ens. & {_ens['N']:,} & {_fmt(_ens['R2'])} & "
          f"{_fmt(_ens['Btw'])} & {_fmt(_ens['Wtn'])} & {_fmt(_ens['Pearson'])} & "
          f"{_fmt(_ens['Spearman'])} \\\\\n")
-_tex += (f"AEF Hist Ensemble Shrink & {_ens_sh['N']:,} & {_fmt(_ens_sh['R2'])} & "
+_tex += (f"AEF Hist Ens.\\ Shrink & {_ens_sh['N']:,} & {_fmt(_ens_sh['R2'])} & "
          f"{_fmt(_ens_sh['Btw'])} & {_fmt(_ens_sh['Wtn'])} & {_fmt(_ens_sh['Pearson'])} & "
          f"{_fmt(_ens_sh['Spearman'])} \\\\\n")
 for _r in [_hist, _mean, _ndvi_row]:
@@ -748,7 +748,7 @@ for _r in [_hist, _mean, _ndvi_row]:
         _tex += (f"{_r['label']} & {_r['N']:,} & {_fmt(_r['R2'])} & "
                  f"{_fmt(_r['Btw'])} & {_fmt(_r['Wtn'])} & {_fmt(_r['Pearson'])} & "
                  f"{_fmt(_r['Spearman'])} \\\\\n")
-_tex += (f"SIAP mun-mean (naive baseline) & {_base['N']:,} & {_fmt(_base['R2'])} & "
+_tex += (f"SIAP Mun.\\ Avg.\\ (naive) & {_base['N']:,} & {_fmt(_base['R2'])} & "
          f"{_fmt(_base['Btw'])} & {_fmt(_base['Wtn'])} & {_fmt(_base['Pearson'])} & "
          f"{_fmt(_base['Spearman'])} \\\\\n")
 _tex += r"""\addlinespace
