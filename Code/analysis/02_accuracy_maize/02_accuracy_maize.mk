@@ -108,6 +108,12 @@ sample_accounting: $(TASK_DIR)/sample_accounting_and_lambda.py
 
 # Census-free lambda estimator: rho from CIMMYT plots, r from public SIAP
 # dispersion (Sec 3.6). Trains the ensemble; ~2 min.
+# Irrigation-projection lower bound on rho/lambda (Sec 3.6): beta from SIAP
+# municipal panel, irrigated shares from Frontera Agricola. All public. ~1 min.
+.PHONY: rho_irrigation_bound
+rho_irrigation_bound: $(TASK_DIR)/rho_irrigation_bound.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
 # Split-sample reliability-attenuation rho estimator (negative result recorded
 # in Sec 3.6: reliability reflects shared features, lambda -> 1). ~10 min.
 .PHONY: rho_from_predictions
