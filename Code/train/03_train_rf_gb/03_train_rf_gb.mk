@@ -56,3 +56,8 @@ train_hist_rf: $(HIST_PRED_SCRIPT)
 .PHONY: train_3period_gb
 train_3period_gb: $(TASK_DIR)/gb_3period_prediction.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
+# Fall-winter-trained ensemble robustness (Sec 5.5 numbers)
+.PHONY: train_oi_ensemble
+train_oi_ensemble: $(TASK_DIR)/gb_aef_hist_ensemble_oi_trained.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
