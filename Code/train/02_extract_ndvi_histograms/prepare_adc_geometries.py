@@ -1,7 +1,7 @@
 """
 prepare_adc_geometries.py — Convert ADC polygons into EE-ready geometry CSVs.
 
-One-time preprocessing. Reads ADC polygons from CA2007_adcloc_poly.shp
+One-time preprocessing. Reads ADC polygons from adc_shapefile.shp
 (the canonical ADC shapefile), drops NaN adcid rows (localities),
 applies simplify + buffer(0) for GEE compatibility, and writes two CSVs:
   1. adc_geometries_for_ee.csv  — one row per ADC polygon
@@ -32,8 +32,8 @@ data_dir  =  os.path.join(proj_dir, "Data")
 
 # ── Inputs ───────────────────────────────────────────────
 adc_shp_file         =  os.path.join(home_dir, "Dropbox", "Projects",
-                                      "Avocado_Deforestation", "Data", "Shapefiles",
-                                      "CA07", "CA2007_adcloc_poly.shp")
+                                      "Maize_prediction", "Data", "Shapefiles",
+                                      "adc_shapefile.shp")
 planting_months_file =  os.path.join(data_dir, "planting_months_harmonic_regression.csv")
 # SIAP monthly planting months — fallback for municipalities absent from the
 # harmonic-regression file (states 11, 27, 28 are missing there entirely).

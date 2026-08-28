@@ -288,7 +288,7 @@ def run_mexico_adc():
     out_dir =  os.path.join(os.path.dirname(__file__), "alpha_earth_adcs")
     os.makedirs(out_dir, exist_ok=True)
 
-    adcs =  gpd.read_file("/home/jsayre/Dropbox/Projects/Avocado_Deforestation/Data/Shapefiles/CA07/CA2007_adcloc_poly.shp")
+    adcs =  gpd.read_file("/home/jsayre/Dropbox/Projects/Maize_prediction/Data/Shapefiles/adc_shapefile.shp")
     adcs =  adcs.dropna(subset=['adcid'])
     adcs['geometry'] =  adcs['geometry'].apply(lambda x: x.simplify(0.0001))
     adcs['geometry'] =  adcs['geometry'].apply(lambda x: x.buffer(0))

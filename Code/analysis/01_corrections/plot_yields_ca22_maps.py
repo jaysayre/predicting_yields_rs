@@ -4,8 +4,8 @@ plot_yields_ca22_maps.py — CA2022 versions of the ADC/municipality yield maps.
 Replaces the maps produced by 1_plot_yields_ADC_mun.ipynb, which plotted the
 **CA2007** census (that notebook builds adc_rc_df twice; cell 14 overwrites the
 CA22 version from cell 3 with CA07 data, so every map cell downstream is CA07)
-on the 2016 AMCA polygons. The CA2007 polygon shapefile it referenced
-(SCIAGA/CA2007_adcloc_poly.shp) is also no longer present locally.
+on the 2016 AMCA polygons. The ADC polygon shapefile it referenced is
+now kept as Data/Shapefiles/adc_shapefile.shp.
 
 Geometry here is `adc_geometries_for_ee.csv` — the ADC polygons the entire Earth
 Engine extraction ran on. Its `adcid` ("01001106-8001") is the CA22 `adc` id with

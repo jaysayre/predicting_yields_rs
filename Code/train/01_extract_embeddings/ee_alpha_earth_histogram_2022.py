@@ -127,8 +127,8 @@ def main():
 
     print("\n--- Loading ADC shapefile ---")
     adcs =  gpd.read_file(
-        "/home/jsayre/Dropbox/Projects/Avocado_Deforestation/Data/Shapefiles/"
-        "CA07/CA2007_adcloc_poly.shp"
+        "/home/jsayre/Dropbox/Projects/Maize_prediction/Data/Shapefiles/"
+        "adc_shapefile.shp"
     )
     adcs =  adcs.dropna(subset=['adcid'])
     adcs =  adcs[~adcs['est'].isin(SKIP_STATES)]

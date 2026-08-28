@@ -51,8 +51,8 @@ MUN_FOLDER     =  'alpha_earth_mun_qbin_hist'
 home_dir   =  os.path.expanduser("~")
 proj_dir   =  os.path.join(home_dir, "Dropbox", "Projects", "Maize_prediction")
 edges_json =  os.path.join(proj_dir, "Data", "alpha_earth", "aef_quantile_bin_edges_8.json")
-adc_shp    =  os.path.join(home_dir, "Dropbox", "Projects", "Avocado_Deforestation",
-                           "Data", "Shapefiles", "CA07", "CA2007_adcloc_poly.shp")
+adc_shp    =  os.path.join(home_dir, "Dropbox", "Projects", "Maize_prediction",
+                           "Data", "Shapefiles", "adc_shapefile.shp")
 mun_shp    =  os.path.join(home_dir, "Dropbox", "Projects", "Avocado_Deforestation",
                            "Data", "raw", "spatial", "Municipality_shp", "MUNICIPIOS.shp")
 

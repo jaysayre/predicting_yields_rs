@@ -47,7 +47,8 @@ sciaga_dir =  os.path.join(home_dir, "Dropbox", "Projects",
 siap_pkg   =  os.path.join(home_dir, "Dropbox", "Projects",
                             "Maize_prediction", "Data", "SIAP", "Cleaned")
 
-adc_shp     =  os.path.join(sciaga_dir, "SCIAGA", "CA2007_adcloc_poly.shp")
+adc_shp     =  os.path.join(home_dir, "Dropbox", "Projects", "Maize_prediction",
+                            "Data", "Shapefiles", "adc_shapefile.shp")
 state_shp   =  os.path.join(sciaga_dir, "Municipality_shp", "STATES.shp")
 agland_csv  =  os.path.join(data_dir, "SIAP_agland", "Output",
                              "2007_adcs_agland_area.csv")

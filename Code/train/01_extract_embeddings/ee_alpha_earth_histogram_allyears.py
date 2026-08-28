@@ -119,8 +119,8 @@ def main():
 
     print("\n--- Loading ADC shapefile ---")
     adcs =  gpd.read_file(
-        "/home/jsayre/Dropbox/Projects/Avocado_Deforestation/Data/Shapefiles/"
-        "CA07/CA2007_adcloc_poly.shp"
+        "/home/jsayre/Dropbox/Projects/Maize_prediction/Data/Shapefiles/"
+        "adc_shapefile.shp"
     )
     adcs =  adcs.dropna(subset=['adcid'])
     adcs['geometry'] =  adcs['geometry'].apply(lambda x: x.simplify(0.0001))

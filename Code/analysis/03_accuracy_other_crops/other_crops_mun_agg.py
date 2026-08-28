@@ -4,9 +4,10 @@ with EX-ANTE agricultural-land weights.
 
 Replaces the legacy notebook table (2026-02) that aggregated ADC predictions
 with census planted-area weights -- census information must not enter the
-aggregation (2026-08-28). Aggregation now mirrors mun_survey_improvement.py:
-each ADC's AEF mean prediction (adc_alpha_earth_preds_{crop}) is weighted by
-its 2007 agricultural-land area. Panel A scores aggregated predictions and the
+aggregation (2026-08-28). Reports the deployed AEF Hist Ens. Shrink model
+(2026-08-28, was AEF mean): per-crop ensemble ADC predictions saved by
+gb_aef_hist_ensemble_other_crops.py (adc_aef_hist_ens_preds_{crop}), shrink
+column, each ADC weighted by its 2007 agricultural-land area. Panel A scores aggregated predictions and the
 SIAP municipal average against the census municipal yield; Panel B scores
 aggregated predictions and the aggregated census against SIAP.
 
@@ -25,7 +26,7 @@ siap_path   =  os.path.join(proj, "Data", "SIAP", "Cleaned", "siap_ag_prod_estim
 overleaf    =  os.path.join(home, "Dropbox", "Overleaf", "Predicting Yields at Scale using RS")
 table_dir   =  os.path.join(proj, "tables")
 
-CROPS =  [("Sorghum", "sorghum"), ("Sugar", "sugar"), ("Wheat", "wheat"), ("Avocados", "avocados")]
+CROPS =  [("Sorghum", "sorghum"), ("Sugar", "sugar"), ("Wheat", "wheat"), ("Avocados", "avocados")]  # tag = trainer crop_name.lower()
 DISP  =  {"Sugar": "Sugarcane"}
 
 def r2(a, b):
@@ -46,11 +47,10 @@ siap["muncode"] =  siap["muncode"].apply(lambda x: str(int(x)).zfill(5))
 rowsA, rowsB =  [], []
 for crop, tag in CROPS:
     cc =  ca[ca["name"] == crop][["adc", "muncode", "land_input", "vol_output"]].copy()
-    pr =  pd.read_parquet(os.path.join(P, f"adc_alpha_earth_preds_{tag}.parquet"))
-    pr =  pr[pr["year"] == 2022].copy()
-    pcol =  [c for c in pr.columns if c.startswith("yield_pred")][0]
-    pr["adc"] =  pr["adcid"].astype(str).str.replace("-", "", regex=False)
-    cc =  cc.merge(pr[["adc", pcol]], on="adc", how="left")
+    pr =  pd.read_parquet(os.path.join(P, f"adc_aef_hist_ens_preds_{tag}.parquet"))
+    pcol =  f"pred_{crop}_shrink"
+    pr["adc"] =  pr["adc"].astype(str).str.replace("-", "", regex=False)
+    cc =  cc.merge(pr[["adc", pcol]].drop_duplicates("adc"), on="adc", how="left")
     cc =  cc.merge(ag[["adc", "siap_agland_area"]], on="adc", how="left")
     cc["w"] =  np.where(cc["siap_agland_area"] > 0, cc["siap_agland_area"], 1.0)
 
@@ -69,12 +69,12 @@ for crop, tag in CROPS:
 
     disp =  DISP.get(crop, crop)
     a =  cm.dropna(subset=["cen_yield", "pred_agg"])
-    rowsA.append(f"{disp} & AEF mean (agg.) & {len(a):,} & {fmt(r2(a['cen_yield'], a['pred_agg']))} & {fmt(rmse(a['cen_yield'], a['pred_agg']))} \\\\")
+    rowsA.append(f"{disp} & AEF Hist Ens.\\ Shrink (agg.) & {len(a):,} & {fmt(r2(a['cen_yield'], a['pred_agg']))} & {fmt(rmse(a['cen_yield'], a['pred_agg']))} \\\\")
     s =  cm.dropna(subset=["cen_yield", "siap_yield"])
     rowsA.append(f"{disp} & SIAP Mun.\\ Avg. & {len(s):,} & {fmt(r2(s['cen_yield'], s['siap_yield']))} & {fmt(rmse(s['cen_yield'], s['siap_yield']))} \\\\")
     rowsA.append(r"\hline")
     b =  cm.dropna(subset=["siap_yield", "pred_agg"])
-    rowsB.append(f"{disp} & AEF mean (agg.) & {len(b):,} & {fmt(r2(b['siap_yield'], b['pred_agg']))} & {fmt(rmse(b['siap_yield'], b['pred_agg']))} \\\\")
+    rowsB.append(f"{disp} & AEF Hist Ens.\\ Shrink (agg.) & {len(b):,} & {fmt(r2(b['siap_yield'], b['pred_agg']))} & {fmt(rmse(b['siap_yield'], b['pred_agg']))} \\\\")
     c =  cm.dropna(subset=["siap_yield", "cen_yield"])
     rowsB.append(f"{disp} & INEGI Census (agg.) & {len(c):,} & {fmt(r2(c['siap_yield'], c['cen_yield']))} & {fmt(rmse(c['siap_yield'], c['cen_yield']))} \\\\")
     rowsB.append(r"\hline")
@@ -82,7 +82,7 @@ for crop, tag in CROPS:
 
 L =  [r"\begin{table}[!htbp]", r"\centering",
       r"\caption{Municipality-level yield prediction results for non-maize crops, 2022. "
-      r"ADC-level AEF mean predictions are aggregated to the municipality level weighting "
+      r"ADC-level AEF Hist Ens.\ Shrink predictions are aggregated to the municipality level weighting "
       r"each ADC by its \emph{ex-ante} agricultural-land area, as in "
       r"Table~\ref{tab:mun_agg_results}; no census information enters the aggregation. "
       r"RMSE in t/ha.}",

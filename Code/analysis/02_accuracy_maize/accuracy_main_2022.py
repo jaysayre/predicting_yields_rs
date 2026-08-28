@@ -161,9 +161,11 @@ def model_rows(label, season_y):
     sh = met(ev, season_y, "_s"); rows.append((f"{label} Shrink", sh, boot_ci(ev, season_y, "_s")))
     return rows
 
-def build_table(season_y, label_season, fname, tag):
+def build_table(season_y, label_season, fname, tag, show_ci=True):
     set_anchor(tag)                      # season-matched SIAP anchor
     orc_season = {"combined": "combined", "spring_summer": "spring_summer"}.get(tag)
+    ci_note = (r" Municipality-cluster bootstrap 95\% confidence intervals for $R^2$ "
+               r"and Within $R^2$ in brackets.") if show_ci else ""
     orc_note = (r" The Oracle (ADC-trained) row is a non-deployable upper bound that trains "
                 r"HistGradientBoosting directly on ADC-level census labels (5-fold GroupKFold "
                 r"over municipalities); it bounds how much yield signal the embeddings carry."
@@ -173,7 +175,7 @@ def build_table(season_y, label_season, fname, tag):
          rf"ADC level --- {label_season}. Corrected rows use ex-ante agricultural-land "
          rf"weights for the municipal anchor, and the anchor is the SIAP municipal "
          rf"maize yield for {ANCHOR_NOTE[tag]}, matching the census target scored "
-         rf"here. Municipality-cluster bootstrap 95\% confidence intervals for $R^2$ and Within $R^2$ in brackets. RMSE in t/ha.{orc_note}}}",
+         rf"here.{ci_note} RMSE in t/ha.{orc_note}}}",
          rf"\label{{tab:accuracy_{tag}}}", r"\footnotesize", r"\begin{tabular}{lrrrrr}", r"\hline",
          r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline",
          r"\multicolumn{6}{l}{\textit{Landsat-derived features}} \\"]
@@ -186,7 +188,7 @@ def build_table(season_y, label_season, fname, tag):
                 lab = tagn.replace("Hist. Raw", "Hist.\\ Raw").replace("Hist. Corr.", "Hist.\\ Corr.").replace("Hist. Shrink", "Hist.\\ Shrink")
                 lab = lab.replace("Ens. Raw", "Ens.\\ Raw").replace("Ens. Corr.", "Ens.\\ Corr.").replace("Ens. Shrink", "Ens.\\ Shrink")
                 L.append(f"{lab} & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(wt)} & {fmt(rm)} \\\\")
-                if ci:
+                if ci and show_ci:
                     (olo, ohi), (wlo, whi) = ci
                     L.append(f" & & \\scriptsize[{fmt(olo)}, {fmt(ohi)}] & & "
                              f"\\scriptsize[{fmt(wlo)}, {fmt(whi)}] & \\\\")
@@ -199,7 +201,7 @@ def build_table(season_y, label_season, fname, tag):
     L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{Benchmark}} \\",
           f"SIAP Mun.\\ Avg. & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\"]
     sci = boot_ci(sb, season_y, "_siap")
-    if sci:
+    if sci and show_ci:
         (olo, ohi), _ = sci
         L.append(f" & & \\scriptsize[{fmt(olo)}, {fmt(ohi)}] & & & \\\\")
     orc_path = os.path.join(P, "oracle_ceiling_2022.csv")
@@ -227,9 +229,7 @@ def build_common_sample_table(season_y, label_season, fname, tag):
          rf"\emph{{same}} {n_cs:,} ADCs (the intersection of ADCs for which all Landsat- "
          rf"and AEF-derived models produce a prediction and a SIAP municipal yield for "
          rf"{ANCHOR_NOTE[tag]} exists), "
-         r"so cross-model differences are not driven by sample composition. Shrink rows "
-         r"apply the within-municipality shrinkage at the within-optimal "
-         r"$\lambda=\rho/r$ estimated on this sample. RMSE in t/ha.}",
+         r"so cross-model differences are not driven by sample composition. RMSE in t/ha.}",
          rf"\label{{tab:common_sample_{tag}}}", r"\begin{tabular}{lrrrrr}", r"\hline",
          r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline",
          r"\multicolumn{6}{l}{\textit{Landsat-derived features}} \\"]
@@ -261,7 +261,7 @@ for nm,_,_ in LANDSAT+AEFM:
     for t,m,_ in model_rows(nm,"yield"): print(f"  {t:24s} N={m[0]:>6,} R2={m[1]:.3f} Btw={m[2]:.3f} Wtn={m[3]:.3f} RMSE={m[4]:.3f}")
 build_table("yield", "Combined season", "accuracy_combined_2022.tex", "combined")
 build_table("yield_pv", "Spring-summer (P-V) season", "accuracy_spring_summer_2022.tex", "spring_summer")
-build_table("yield_oi", "Fall-winter (O-I) season", "accuracy_fall_winter_2022.tex", "fall_winter")
+build_table("yield_oi", "Fall-winter (O-I) season", "accuracy_fall_winter_2022.tex", "fall_winter", show_ci=False)
 build_common_sample_table("yield", "Combined season", "common_sample_combined_2022.tex", "combined")
 build_common_sample_table("yield_pv", "Spring-summer (P-V) season", "common_sample_spring_summer_2022.tex", "spring_summer")
 

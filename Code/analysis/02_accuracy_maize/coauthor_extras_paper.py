@@ -64,7 +64,8 @@ agland_csv  =  os.path.join(data_dir, "SIAP_agland", "Output",
 # Paper uses by-season SIAP for training but ca2007 for mun yield context
 siap_ca07   =  os.path.join(siap_pkg, "siap_ag_prod_estimation_ca2007.dta")
 siap_szn    =  os.path.join(siap_pkg, "siap_ag_prod_estimation_by_season.dta")
-adc_shp     =  os.path.join(sciaga_dir, "SCIAGA", "CA2007_adcloc_poly.shp")
+adc_shp     =  os.path.join(home_dir, "Dropbox", "Projects", "Maize_prediction",
+                            "Data", "Shapefiles", "adc_shapefile.shp")
 state_shp   =  os.path.join(sciaga_dir, "Municipality_shp", "STATES.shp")
 mun_shp     =  os.path.join(data_dir, "SIAP_agland", "Output", "agland_mun16.shp")
 

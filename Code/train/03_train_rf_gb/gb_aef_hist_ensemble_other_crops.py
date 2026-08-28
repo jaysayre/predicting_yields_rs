@@ -351,6 +351,13 @@ for crop_name, season in CROP_SEASONS.items():
     all_adc_results.append({'Crop': disp_name, 'Model': 'AEF Hist Ens. Corr.', **m_corr})
     all_adc_results.append({'Crop': disp_name, 'Model': 'AEF Hist Ens. Shrink', **m_shr})
 
+    # Persist ADC-level predictions so downstream municipal aggregation
+    # (other_crops_mun_agg.py, Table A4) can use the ensemble instead of AEF mean
+    _out_pq = os.path.join(proj_dir, "Data", "predictions",
+                           f"adc_aef_hist_ens_preds_{crop_name.lower()}.parquet")
+    df[['adc', 'muncode', pcol, corr_col, shr_col]].to_parquet(_out_pq, index=False)
+    print(f"  Saved ADC predictions -> {_out_pq}")
+
 
 # -- 3. Print summary & update Overleaf table ----------------
 print(f"\n\n{'='*70}")
