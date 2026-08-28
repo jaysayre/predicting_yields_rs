@@ -87,7 +87,17 @@ rl, rh =  np.percentile(draws[:, 0], [2.5, 97.5])
 ll, lh =  np.percentile(draws[:, 1], [2.5, 97.5])
 print(f"bootstrap 95% CI: rho_lb [{rl:.3f}, {rh:.3f}]   lambda_lb [{ll:.3f}, {lh:.3f}]")
 
+# point estimate under the labeled channel assumption (Sec 3.6): the model's
+# validity on the unmeasured within-mun channel is half the measured irrigation
+# channel's (midpoint of the polar cases rho_v = 0 and rho_v = rho_u)
+sd_u  =  beta*sd_irr
+sd_v  =  float(np.sqrt(SD_Y_W**2 - sd_u**2))
+rho_u =  c
+rho_mid =  (rho_u*sd_u + (rho_u/2)*sd_v)/SD_Y_W
+print(f"midpoint point estimate: rho_hat = {rho_mid:.3f}  lambda_hat = {rho_mid/0.655:.3f}")
+
 out =  {"beta": round(beta, 2), "c_pred_irr": round(c, 3), "sd_irr": round(sd_irr, 3),
+        "rho_midpoint": round(rho_mid, 3), "lambda_midpoint": round(rho_mid/0.655, 3),
         "sd_pred": round(sd_pred, 2), "rho_lb": round(rho_lb, 3), "lambda_lb": round(lam_lb, 3),
         "rho_lb_ci": [round(rl, 3), round(rh, 3)], "lambda_lb_ci": [round(ll, 3), round(lh, 3)],
         "n_adc": int(len(ev))}
