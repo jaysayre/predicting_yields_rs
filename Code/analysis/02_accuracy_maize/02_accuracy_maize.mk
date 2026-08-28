@@ -105,3 +105,9 @@ robustness_stats: $(TASK_DIR)/robustness_lambda_ci_qbin.py
 .PHONY: sample_accounting
 sample_accounting: $(TASK_DIR)/sample_accounting_and_lambda.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
+# Census-free lambda estimator: rho from CIMMYT plots, r from public SIAP
+# dispersion (Sec 3.6). Trains the ensemble; ~2 min.
+.PHONY: calibrate_lambda
+calibrate_lambda: $(TASK_DIR)/calibrate_lambda_cimmyt.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
