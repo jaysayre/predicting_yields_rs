@@ -93,3 +93,9 @@ $(TABLES_DIR)/accuracy_profile_by_adc_chars.tex: $(TASK_DIR)/accuracy_profile_by
 # CIMMYT farmer-trial external validation (Table \ref{tab:cimmyt_profile})
 $(TABLES_DIR)/accuracy_cimmyt_profile.tex: $(TASK_DIR)/accuracy_cimmyt_profile.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
+
+# Robustness numbers cited in prose: lambda sensitivity, bootstrap CIs,
+# qbin-vs-fixed comparison (writes output/robustness_lambda_ci_qbin.json)
+.PHONY: robustness_stats
+robustness_stats: $(TASK_DIR)/robustness_lambda_ci_qbin.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<

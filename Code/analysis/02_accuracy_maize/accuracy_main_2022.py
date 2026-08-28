@@ -154,7 +154,7 @@ def build_table(season_y, label_season, fname, tag):
          rf"ADC level --- {label_season}. Corrected rows use ex-ante agricultural-land "
          rf"weights for the municipal anchor, and the anchor is the SIAP municipal "
          rf"maize yield for {ANCHOR_NOTE[tag]}, matching the census target scored "
-         rf"here.{orc_note}}}",
+         rf"here. RMSE in t/ha.{orc_note}}}",
          rf"\label{{tab:accuracy_{tag}}}", r"\begin{tabular}{lrrrrr}", r"\hline",
          r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline",
          r"\multicolumn{6}{l}{\textit{Landsat-derived features}} \\"]
@@ -202,7 +202,7 @@ def build_common_sample_table(season_y, label_season, fname, tag):
          rf"{ANCHOR_NOTE[tag]} exists), "
          r"so cross-model differences are not driven by sample composition. Shrink rows "
          r"apply the within-municipality shrinkage at the within-optimal "
-         r"$\lambda=\rho/r$ estimated on this sample.}",
+         r"$\lambda=\rho/r$ estimated on this sample. RMSE in t/ha.}",
          rf"\label{{tab:common_sample_{tag}}}", r"\begin{tabular}{lrrrrr}", r"\hline",
          r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline",
          r"\multicolumn{6}{l}{\textit{Landsat-derived features}} \\"]

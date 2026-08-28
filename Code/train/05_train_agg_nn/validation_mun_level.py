@@ -175,7 +175,7 @@ tex = ("\\begin{table}[htbp]\n\\centering\n"
        "predictions are aggregated to the municipality level using agricultural-land-area "
        "weights; the NDVI model is trained and scored directly at the "
        "municipality level. The Agg-NN uses its development model (trained on the other "
-       "80\\%).}\n"
+       "80\\%). RMSE in t/ha.}\n"
        "\\label{tab:validation_mun}\n\\begin{tabular}{lrrr}\n\\hline\n"
        "Model & $N$ & $R^2$ & RMSE \\\\\n\\hline\n"
        + "\n".join(lines) +

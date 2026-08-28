@@ -346,9 +346,10 @@ for crop_name, season in CROP_SEASONS.items():
     df[shr_col] = apply_shrink(df, pcol, lam) if np.isfinite(lam) else df[pcol]
     m_shr = eval_row(df, 'yield', shr_col, f'{crop_name} AEF Hist Ens. Shrink (lam={lam:.2f})')
 
-    all_adc_results.append({'Crop': crop_name, 'Model': 'AEF Hist Ens.', **m_raw})
-    all_adc_results.append({'Crop': crop_name, 'Model': 'AEF Hist Ens. Corr.', **m_corr})
-    all_adc_results.append({'Crop': crop_name, 'Model': 'AEF Hist Ens. Shrink', **m_shr})
+    disp_name = {'Sugar': 'Sugarcane'}.get(crop_name, crop_name)  # display name in the paper table
+    all_adc_results.append({'Crop': disp_name, 'Model': 'AEF Hist Ens.', **m_raw})
+    all_adc_results.append({'Crop': disp_name, 'Model': 'AEF Hist Ens. Corr.', **m_corr})
+    all_adc_results.append({'Crop': disp_name, 'Model': 'AEF Hist Ens. Shrink', **m_shr})
 
 
 # -- 3. Print summary & update Overleaf table ----------------
@@ -397,7 +398,8 @@ for line in old_lines:
     if 'AEF Hist Ens' in line:          # remove stale ensemble rows (re-runnable)
         continue
     for crop_name in CROP_SEASONS:
-        if f"{crop_name} & SIAP" in line:
+        crop_disp = {'Sugar': 'Sugarcane'}.get(crop_name, crop_name)
+        if f"{crop_disp} & SIAP" in line:
             new_lines.extend(hist_ens_rows(crop_name))
             break
     new_lines.append(line)

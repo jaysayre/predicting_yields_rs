@@ -211,6 +211,17 @@ adc_combo = adc_bh.merge(
     on=['adcid', 'year'], how='inner'
 )
 
+# Drop rows whose features are ENTIRELY absent: the parquets carry a row for
+# every ADC but leave values null where the ESA WorldCover cropland mask found
+# no pixels. fillna(0) below would otherwise turn those into all-zero vectors
+# and emit a constant prediction. Matches the identical drop in
+# gb_aef_hist_ensemble.py, so the profile sample equals the main-table sample.
+_bin_null =  adc_combo[bin_cols].isna().all(axis=1)
+_pct_null =  adc_combo[pct_cols].isna().all(axis=1)
+print(f"  dropping {int((_bin_null | _pct_null).sum()):,} ADCs with no cropland "
+      f"pixels (all-null features)")
+adc_combo =  adc_combo[~(_bin_null | _pct_null)].copy()
+
 
 # -- 3. Ensemble predictions ---------------------------------
 print(f"\nGenerating ensemble predictions (w_bin={W_BIN})...")
@@ -341,7 +352,7 @@ print("\nWriting LaTeX table...")
 lines = []
 lines.append(r"\begin{table}[htbp]")
 lines.append(r"\centering")
-lines.append(r"\caption{AEF Hist Ensemble prediction accuracy by ADC characteristics, maize vs.\ INEGI 2022 census}")
+lines.append(r"\caption{AEF Hist Ensemble prediction accuracy by ADC characteristics, maize vs.\ INEGI 2022 census. RMSE in t/ha.}")
 lines.append(r"\label{tab:accuracy_profile}")
 lines.append(r"\begin{tabular}{lrrrrr}")
 lines.append(r"\hline")

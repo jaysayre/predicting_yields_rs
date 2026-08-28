@@ -136,7 +136,7 @@ L = [r"\begin{table}[htbp]", r"\centering",
      r"trained directly at the municipality level (random municipality-year cross-validation). "
      r"Shrink (agg.)\ rows first apply each model's within-municipality shrinkage exactly as in the "
      r"main accuracy tables (cross-validated $\lambda$, deployable from predictions alone), then "
-     r"aggregate the shrunk ADC predictions with the same ex-ante weights.}", r"\label{tab:mun_agg_results}",
+     r"aggregate the shrunk ADC predictions with the same ex-ante weights. RMSE in t/ha.}", r"\label{tab:mun_agg_results}",
      r"\begin{tabular}{lrrr}", r"\hline",
      r"\multicolumn{4}{l}{\textit{Panel A: vs.\ INEGI Census (aggregated)}} \\", r"\hline",
      r"Model & $N$ & $R^2$ & RMSE \\", r"\hline"] + fmt(panelA) + [r"\hline",
