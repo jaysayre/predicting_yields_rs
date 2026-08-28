@@ -727,7 +727,7 @@ _r_cs = np.corrcoef(_mun['mean_cimmyt'].values, _mun['yield_siap'].values)[0, 1]
 
 _drop_pct = 100 * (1 - len(cy) / _n_pre_clean)
 
-_tex = r"""\begin{table}[!ht]
+_tex = r"""\begin{table}[!htbp]
 \centering
 \caption{AEF Hist Ensemble predictions evaluated against CIMMYT plot-level maize yields, 2017--2022} \label{tab:cimmyt_profile}
 \footnotesize

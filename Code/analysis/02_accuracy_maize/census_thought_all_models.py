@@ -148,7 +148,7 @@ def f3(v):
     return (f"{v:.3f}").replace("-", "$-$") if v < 0 else f"{v:.3f}"
 
 # ── build panels ────────────────────────────────────────
-L = [r"\begin{table}[htbp]", r"\centering",
+L = [r"\begin{table}[!htbp]", r"\centering",
      r"\caption{Thought experiment: ADC-level yield prediction accuracy when correcting "
      r"toward INEGI census municipality yields vs.\ SIAP municipality yields, for all models. "
      r"All evaluated against the INEGI 2022 census at the ADC level (combined season). "

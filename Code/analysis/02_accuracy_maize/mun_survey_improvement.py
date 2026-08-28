@@ -129,7 +129,7 @@ def fmt(rows):
 print("Panel A (vs census):");  [print("  ", r) for r in fmt(panelA)]
 print("Panel B (vs SIAP):");    [print("  ", r) for r in fmt(panelB)]
 
-L = [r"\begin{table}[htbp]", r"\centering",
+L = [r"\begin{table}[!htbp]", r"\centering",
      r"\caption{Municipality-level maize yield prediction results, 2022. ADC-level predictions are "
      r"aggregated to the municipality level weighting each ADC by its \emph{ex-ante} agricultural-land "
      r"area (a proxy for maize area that does not use the census), except NDVI\ GB (mun.), which is "

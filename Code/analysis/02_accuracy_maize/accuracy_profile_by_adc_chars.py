@@ -350,7 +350,7 @@ all_results.extend(res)
 print("\nWriting LaTeX table...")
 
 lines = []
-lines.append(r"\begin{table}[htbp]")
+lines.append(r"\begin{table}[!htbp]")
 lines.append(r"\centering")
 lines.append(r"\caption{AEF Hist Ensemble prediction accuracy by ADC characteristics, maize vs.\ INEGI 2022 census. RMSE in t/ha.}")
 lines.append(r"\label{tab:accuracy_profile}")

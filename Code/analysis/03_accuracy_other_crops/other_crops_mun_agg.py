@@ -80,7 +80,7 @@ for crop, tag in CROPS:
     rowsB.append(r"\hline")
     print(f"{crop:10s} vsCensus AEF={r2(a['cen_yield'], a['pred_agg']):.3f} SIAP={r2(s['cen_yield'], s['siap_yield']):.3f} | vsSIAP AEF={r2(b['siap_yield'], b['pred_agg']):.3f} Census={r2(c['siap_yield'], c['cen_yield']):.3f}")
 
-L =  [r"\begin{table}[htbp]", r"\centering",
+L =  [r"\begin{table}[!htbp]", r"\centering",
       r"\caption{Municipality-level yield prediction results for non-maize crops, 2022. "
       r"ADC-level AEF mean predictions are aggregated to the municipality level weighting "
       r"each ADC by its \emph{ex-ante} agricultural-land area, as in "

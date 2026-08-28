@@ -168,7 +168,7 @@ def build_table(season_y, label_season, fname, tag):
                 r"HistGradientBoosting directly on ADC-level census labels (5-fold GroupKFold "
                 r"over municipalities); it bounds how much yield signal the embeddings carry."
                 ) if orc_season else ""
-    L = [r"\begin{table}[htbp]", r"\centering",
+    L = [r"\begin{table}[!htbp]", r"\centering",
          r"\caption{Accuracy metrics for maize yield predictions vs.\ INEGI 2022 census, "
          rf"ADC level --- {label_season}. Corrected rows use ex-ante agricultural-land "
          rf"weights for the municipal anchor, and the anchor is the SIAP municipal "
@@ -221,7 +221,7 @@ def build_common_sample_table(season_y, label_season, fname, tag):
     models =  [nm for nm,_,_ in LANDSAT + AEFM]
     cs =  ev.dropna(subset=models + ["siap", season_y]).copy()
     n_cs =  len(cs)
-    L = [r"\begin{table}[htbp]", r"\centering",
+    L = [r"\begin{table}[!htbp]", r"\centering",
          r"\caption{Common-sample accuracy for maize yield predictions vs.\ INEGI 2022 "
          rf"census, ADC level --- {label_season}. Every model is evaluated on the "
          rf"\emph{{same}} {n_cs:,} ADCs (the intersection of ADCs for which all Landsat- "

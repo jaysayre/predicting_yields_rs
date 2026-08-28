@@ -169,7 +169,7 @@ for grp, label, f, col in MODELS:
     lines.append(f"{label} & {n:,} & {r2v:.3f} & {rmse:.3f} \\\\")
 
 # ── Write LaTeX table ───────────────────────────────────
-tex = ("\\begin{table}[htbp]\n\\centering\n"
+tex = ("\\begin{table}[!htbp]\n\\centering\n"
        "\\caption{Municipality-level validation performance (SIAP Spring-Summer maize, "
        "2017--2024). Every model is trained with the same randomly held-out 20\\% of "
        "municipalities excluded from training and evaluated on the same held-out "
