@@ -23,8 +23,10 @@ P    = os.path.join(proj, "Data", "predictions")
 out  = os.path.join(proj, "plots", "coauthor_extras_paper")
 
 ev = pd.read_parquet(os.path.join(P, "adc_aef_hist_ens_eval.parquet"))[["adc","muncode","yield","pred"]].rename(columns={"pred":"AEF Hist Ens."})
-MODELS = [("NDVI Hist.","adc_harmonic_h3_fixed_preds.parquet","pred"),
-          ("NDVI Q-Hist.","adc_harmonic_h3_quantile_preds.parquet","pred"),
+# Ensemble-eligible sample only (2026-08-28), matching the main accuracy tables:
+# ADCs with no cropland pixels are excluded for every model.
+ev = ev[ev["AEF Hist Ens."].notna()].copy()
+MODELS = [("NDVI","adc_aefn2_masked_preds.parquet","pred"),  # production masked NDVI baseline
           ("AEF mean","adc_alpha_earth_preds.csv","yield_pred"),
           ("Agg-NN","adc_mlp_yield_preds.csv","pred_yield"),
           ("AEF Hist","adc_aef_hist_gb_preds.parquet","yield_pred"),

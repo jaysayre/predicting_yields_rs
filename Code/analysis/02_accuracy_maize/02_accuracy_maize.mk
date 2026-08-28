@@ -108,6 +108,12 @@ sample_accounting: $(TASK_DIR)/sample_accounting_and_lambda.py
 
 # Census-free lambda estimator: rho from CIMMYT plots, r from public SIAP
 # dispersion (Sec 3.6). Trains the ensemble; ~2 min.
+# Split-sample reliability-attenuation rho estimator (negative result recorded
+# in Sec 3.6: reliability reflects shared features, lambda -> 1). ~10 min.
+.PHONY: rho_from_predictions
+rho_from_predictions: $(TASK_DIR)/rho_from_predictions.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
 .PHONY: calibrate_lambda
 calibrate_lambda: $(TASK_DIR)/calibrate_lambda_cimmyt.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
