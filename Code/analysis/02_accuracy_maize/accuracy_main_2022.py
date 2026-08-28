@@ -57,6 +57,25 @@ def cv_lambda(df, pcol, ycol, gc="muncode"):
     return float(np.clip(np.mean(lams), 0, 1)) if lams else np.nan
 def shrink(df, pcol, lam, gc="muncode"):
     g = df.groupby(gc)[pcol]; return g.transform("mean") + lam*(df[pcol]-g.transform("mean"))
+def boot_ci(df, ycol, pcol, nrep=1000, seed=42, gc="muncode"):
+    """Municipality-cluster bootstrap 95% CI for (overall R2, within R2)."""
+    sb_ = df[[ycol, pcol, gc]].replace([np.inf, -np.inf], np.nan).dropna()
+    if len(sb_) < 100: return None
+    gm = sb_.groupby(gc)[[ycol, pcol]].transform("mean")
+    d = pd.DataFrame({"m": sb_[gc].values,
+        "sse": (sb_[ycol]-sb_[pcol])**2, "y": sb_[ycol], "y2": sb_[ycol]**2,
+        "wn": ((sb_[pcol]-gm[pcol])-(sb_[ycol]-gm[ycol]))**2,
+        "wd": (sb_[ycol]-gm[ycol])**2})
+    g = d.groupby("m").agg(n=("y", "size"), sse=("sse", "sum"), sy=("y", "sum"),
+                           sy2=("y2", "sum"), wn=("wn", "sum"), wd=("wd", "sum"))
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(g), size=(nrep, len(g)))
+    n = g["n"].values[idx].sum(1); sse = g["sse"].values[idx].sum(1)
+    sy = g["sy"].values[idx].sum(1); sy2 = g["sy2"].values[idx].sum(1)
+    ov = 1 - sse/(sy2 - sy**2/n)
+    wt = 1 - g["wn"].values[idx].sum(1)/g["wd"].values[idx].sum(1)
+    pc = lambda x: (float(np.percentile(x, 2.5)), float(np.percentile(x, 97.5)))
+    return pc(ov), pc(wt)
 def correct(df, pcol, gc="muncode"):
     d = df[df[pcol].notna()].copy(); d["wv"] = d[pcol]*d["corr_w"]
     a = d.groupby(gc).agg(wv=("wv","sum"), w=("corr_w","sum"), siap=("siap","first")).reset_index()
@@ -136,10 +155,10 @@ def fmt(v, neg_math=True):
 def model_rows(label, season_y):
     """Return (raw, corr, shrink) metric tuples for one model + season."""
     rows = []
-    raw = met(ev, season_y, label); rows.append((f"{label} Raw", raw))
-    ev["_c"] = correct(ev, label); cr = met(ev, season_y, "_c"); rows.append((f"{label} Corr.", cr))
+    raw = met(ev, season_y, label); rows.append((f"{label} Raw", raw, boot_ci(ev, season_y, label)))
+    ev["_c"] = correct(ev, label); cr = met(ev, season_y, "_c"); rows.append((f"{label} Corr.", cr, boot_ci(ev, season_y, "_c")))
     lam = cv_lambda(ev, label, season_y); ev["_s"] = shrink(ev, label, lam)
-    sh = met(ev, season_y, "_s"); rows.append((f"{label} Shrink", sh))
+    sh = met(ev, season_y, "_s"); rows.append((f"{label} Shrink", sh, boot_ci(ev, season_y, "_s")))
     return rows
 
 def build_table(season_y, label_season, fname, tag):
@@ -154,19 +173,23 @@ def build_table(season_y, label_season, fname, tag):
          rf"ADC level --- {label_season}. Corrected rows use ex-ante agricultural-land "
          rf"weights for the municipal anchor, and the anchor is the SIAP municipal "
          rf"maize yield for {ANCHOR_NOTE[tag]}, matching the census target scored "
-         rf"here. RMSE in t/ha.{orc_note}}}",
-         rf"\label{{tab:accuracy_{tag}}}", r"\begin{tabular}{lrrrrr}", r"\hline",
+         rf"here. Municipality-cluster bootstrap 95\% confidence intervals for $R^2$ and Within $R^2$ in brackets. RMSE in t/ha.{orc_note}}}",
+         rf"\label{{tab:accuracy_{tag}}}", r"\footnotesize", r"\begin{tabular}{lrrrrr}", r"\hline",
          r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline",
          r"\multicolumn{6}{l}{\textit{Landsat-derived features}} \\"]
     def emit(group):
         for nm,_,_ in group:
-            for tagn, m in model_rows(nm, season_y):
+            for tagn, m, ci in model_rows(nm, season_y):
                 n, ov, bt, wt, rm = m
                 # Uniform inter-word spacing after abbreviation periods ("Hist.", "Ens.")
                 # so a model's Raw/Corr./Shrink rows are typeset identically.
                 lab = tagn.replace("Hist. Raw", "Hist.\\ Raw").replace("Hist. Corr.", "Hist.\\ Corr.").replace("Hist. Shrink", "Hist.\\ Shrink")
                 lab = lab.replace("Ens. Raw", "Ens.\\ Raw").replace("Ens. Corr.", "Ens.\\ Corr.").replace("Ens. Shrink", "Ens.\\ Shrink")
                 L.append(f"{lab} & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(wt)} & {fmt(rm)} \\\\")
+                if ci:
+                    (olo, ohi), (wlo, whi) = ci
+                    L.append(f" & & \\scriptsize[{fmt(olo)}, {fmt(ohi)}] & & "
+                             f"\\scriptsize[{fmt(wlo)}, {fmt(whi)}] & \\\\")
     emit(LANDSAT)
     L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{AEF-derived features}} \\"]
     emit(AEFM)
@@ -175,6 +198,10 @@ def build_table(season_y, label_season, fname, tag):
     n, ov, bt, wt, rm = met(sb, season_y, "_siap")
     L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{Benchmark}} \\",
           f"SIAP & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\"]
+    sci = boot_ci(sb, season_y, "_siap")
+    if sci:
+        (olo, ohi), _ = sci
+        L.append(f" & & \\scriptsize[{fmt(olo)}, {fmt(ohi)}] & & & \\\\")
     orc_path = os.path.join(P, "oracle_ceiling_2022.csv")
     if orc_season and os.path.exists(orc_path):
         o = pd.read_csv(orc_path); o = o[o["season"] == orc_season]
@@ -231,7 +258,7 @@ def build_common_sample_table(season_y, label_season, fname, tag):
 print("Combined-season rows:")
 set_anchor("combined")
 for nm,_,_ in LANDSAT+AEFM:
-    for t,m in model_rows(nm,"yield"): print(f"  {t:24s} N={m[0]:>6,} R2={m[1]:.3f} Btw={m[2]:.3f} Wtn={m[3]:.3f} RMSE={m[4]:.3f}")
+    for t,m,_ in model_rows(nm,"yield"): print(f"  {t:24s} N={m[0]:>6,} R2={m[1]:.3f} Btw={m[2]:.3f} Wtn={m[3]:.3f} RMSE={m[4]:.3f}")
 build_table("yield", "Combined season", "accuracy_combined_2022.tex", "combined")
 build_table("yield_pv", "Spring-summer (P-V) season", "accuracy_spring_summer_2022.tex", "spring_summer")
 build_table("yield_oi", "Fall-winter (O-I) season", "accuracy_fall_winter_2022.tex", "fall_winter")

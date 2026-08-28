@@ -235,6 +235,9 @@ def main():
         print("    census-yield municipal maps SKIPPED — paper keeps the CA07 versions")
     base_map(mun, "siap_yield", f"maizeyield_mun_siap_allmx_nolegend_{EVAL_YEAR}.png", 0, 12)
     base_map(mun, "pred_mun",   f"maizeyield_mun_pred_allmx_nolegend_{EVAL_YEAR}.png", 0, 12)
+    # legend (colorbar) variants used in the paper since 2026-08-27
+    base_map(mun, "siap_yield", f"maizeyield_mun_siap_allmx_{EVAL_YEAR}.png", 0, 12, legend=True)
+    base_map(mun, "pred_mun",   f"maizeyield_mun_pred_allmx_{EVAL_YEAR}.png", 0, 12, legend=True)
 
     print("\ndone — 11 figures written to plots/")
     print("NOTE: the municipal SIAP/pred pair is now _2022 (was _2018); update the two")
