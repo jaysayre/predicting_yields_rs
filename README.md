@@ -102,7 +102,11 @@ is produced by a make target and copied to Overleaf by
 | Survey-improvement table | `analysis/02_accuracy_maize/mun_survey_improvement.py` |
 | ADC-characteristics profile | `analysis/02_accuracy_maize/accuracy_profile_by_adc_chars.py` |
 | CIMMYT external validation | `analysis/02_accuracy_maize/accuracy_cimmyt_profile.py` |
-| Other-crops table | `train/03_train_rf_gb/gb_aef_hist_ensemble_other_crops.py` |
+| Other-crops table (ADC) | `train/03_train_rf_gb/gb_aef_hist_ensemble_other_crops.py` |
+| Other-crops table (municipal, ex-ante weights) | `analysis/03_accuracy_other_crops/other_crops_mun_agg.py` |
+| Robustness stats cited in prose (CIs, lambda curve, qbin) | `analysis/02_accuracy_maize/robustness_lambda_ci_qbin.py` |
+| Sample-size accounting + dispersion gauge | `analysis/02_accuracy_maize/sample_accounting_and_lambda.py` |
+| Census-free lambda calibration (CIMMYT rho) | `analysis/02_accuracy_maize/calibrate_lambda_cimmyt.py` |
 | Ex-ante targeting figures | `analysis/02_accuracy_maize/exante_trust_composite.py` + `fig_*.py` |
 | Census yield maps (CA07, Fig. 1) | `analysis/01_corrections/1_plot_yields_ADC_mun.ipynb` |
 | Prediction/error maps (CA22) + municipal SIAP/pred pair | `analysis/01_corrections/plot_yields_ca22_maps.py` |
