@@ -15,3 +15,5 @@ MD_lab_code/
 *.odt
 *.bak
 *.log
+# Superseded/diagnostic scripts parked locally; never committed
+Code/**/dep/
