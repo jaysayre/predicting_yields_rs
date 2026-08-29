@@ -3,11 +3,12 @@ fig1_oaxaca_diff_map.py — panel (f) of Figure 1: Oaxaca inset of the DIFFERENC
 between the ADC census yield (panel d) and the municipality census average
 (panel c), i.e. within-municipality yield deviations.
 
-Reproduces the data behind panels (c)/(d) of fig:adc_mun_yield_comp exactly as
-1_plot_yields_ADC_mun.ipynb drew them: CA2007 maize yields on the 2016 AMCA ADC
-polygons (type == 'total'), municipal average = sum(Q)/sum(sup_sem) over the
-same census ADC records, all rendered in the MUNICIPIOS.shp Lambert Conformal
-Conic CRS on the identical Oaxaca window (x 3050000-3100000, y 710000-745000).
+Data: CA2007 maize yields at the 2007 ADC level (rendimiento_agr_adc.dta),
+summed across seasons (the notebook's season_comp == "combined"), drawn on the
+CA2007 ADC polygons (Data/Shapefiles/adc_shapefile.shp). The municipal average
+subtracted is sum(Q)/sum(sup_sem) over the same census ADC records. Rendered in
+the MUNICIPIOS.shp Lambert Conformal Conic CRS on the identical Oaxaca window
+as panels (c)/(d) (x 3050000-3100000, y 710000-745000).
 
 Output (to Maize_prediction/plots/):
   maizeyield_adc_mun_diff.png   ADC yield minus municipal census average, Oaxaca inset
@@ -30,12 +31,12 @@ proj_dir    =  os.path.join(home_dir, "Dropbox", "Projects", "Maize_prediction")
 misal_dir   =  os.path.join(home_dir, "Dropbox", "Projects", "Crop_misallocation")
 data_dir    =  os.path.join(proj_dir, "Data")
 plot_dir    =  os.path.join(proj_dir, "plots")
-amca_dir    =  os.path.join(data_dir, "INEGI", "Areas_Censal_Agropecuario_2016")
-mdlab_dir   =  os.path.join(data_dir, "INEGI", "MD_lab_outputs")
+ca07_dir    =  os.path.join(misal_dir, "Data", "INEGI", "Microdata_lab_outputs",
+                            "CA07_ADC_prod_data_2023-05-09")
 
 # ── Inputs ───────────────────────────────────────────────
-adc_yield_path =  os.path.join(mdlab_dir, "ca2007_maize_amca_adcs.dta")            # CA2007 maize yields on 2016 AMCA ADCs (panels c/d data)
-adc_shp_path   =  os.path.join(amca_dir, "census_areas.shp")                        # 2016 AMCA ADC polygons (no .prj; coords are WGS84 lon/lat)
+adc_yield_path =  os.path.join(ca07_dir, "rendimiento_agr_adc.dta")                # CA2007 maize yields at the 2007 ADC level
+adc_shp_path   =  os.path.join(data_dir, "Shapefiles", "adc_shapefile.shp")        # CA2007 ADC polygons (WGS84)
 mun_shp_path   =  os.path.join(misal_dir, "Data", "Municipality_shp", "MUNICIPIOS.shp")  # municipality polygons (LCC CRS of panels c/d)
 state_shp_path =  os.path.join(misal_dir, "Data", "Municipality_shp", "STATES.shp")      # state boundaries
 
@@ -49,11 +50,12 @@ DPI         =  600
 
 
 def main():
-    # ── CA2007 yields on the 2016 AMCA ADCs (combined seasons) ──
+    # ── CA2007 maize yields on 2007 ADCs, summed across seasons ──
     adc =  pd.read_stata(adc_yield_path)
-    adc =  adc[adc["type"] == "total"].copy()
-    adc =  adc.rename(columns={"adc": "adcid"})
-    adc["muncode"] =  adc["adcid"].astype(str).str[:5]
+    adc =  adc[adc["name"] == "Maize"]
+    adc =  (adc.groupby(["adc", "muncode"])[["sup_sem", "Q"]].sum().reset_index()
+               .rename(columns={"adc": "adcid"}))
+    adc["yield"] =  adc["Q"] / adc["sup_sem"]
 
     # municipal census average — the quantity mapped in panel (c)
     mun =  adc.groupby("muncode").agg(Q=("Q", "sum"), s=("sup_sem", "sum")).reset_index()
@@ -62,16 +64,16 @@ def main():
     adc["yield_diff"] =  adc["yield"] - adc["mun_yield"]     # panel (d) minus panel (c)
     adc["zero_yield"] =  adc["yield"] == 0                   # rendered lightgrey in panel (d); mirror that
 
-    # ── Geometry, in the same CRS chain as the notebook ──
+    # ── Geometry ─────────────────────────────────────────
     mun_shp =  gpd.read_file(mun_shp_path)
     st_line =  gpd.read_file(state_shp_path)
     st_line["geometry"] =  st_line["geometry"].boundary
 
-    print("reading 2016 AMCA polygons (Oaxaca window)")
+    print("reading CA2007 ADC polygons (Oaxaca window)")
     # window y 710-745km in this LCC (lat origin 12) sits at lat ~18.1-18.8, lon ~-96.9..-96.1
     shp =  gpd.read_file(adc_shp_path, bbox=(-97.4, 17.7, -95.6, 19.2))
-    shp =  shp[["CONTROL", "geometry"]].rename(columns={"CONTROL": "adcid"})
-    shp =  shp.set_crs("EPSG:4326", allow_override=True).to_crs(mun_shp.crs)
+    shp =  shp[["adcid", "geometry"]]
+    shp =  shp.to_crs(mun_shp.crs)
     shp =  shp.merge(adc[["adcid", "yield_diff", "zero_yield"]], on="adcid", how="left")
     print(f"    {len(shp):,} polygons, {shp['yield_diff'].notna().sum():,} with a yield difference")
 

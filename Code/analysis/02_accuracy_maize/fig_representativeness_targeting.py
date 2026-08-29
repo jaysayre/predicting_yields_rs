@@ -17,7 +17,7 @@ This figure shows realized within-municipality skill rising monotonically across
       ex-ante driver of agro-ecological heterogeneity).
 
 Inputs (under ~/Dropbox/Projects/Maize_prediction/):
-  Data/predictions/adc_aef_hist_ens_eval.parquet           -- ADC yield + pred
+  Data/predictions/adc_aef_hist_ens_eval.parquet           -- ADC yield + pred (shrink applied here, lambda=0.74)
   plots/coauthor_extras_paper/exante_trust_index.csv       -- per-mun ex-ante features
 Output:
   plots/coauthor_extras_paper/fig_representativeness_targeting.pdf (pgf/Times)
@@ -71,7 +71,15 @@ ev    =  pd.read_parquet(os.path.join(pred_dir, "adc_aef_hist_ens_eval.parquet")
 trust =  pd.read_csv(os.path.join(plot_dir, "exante_trust_index.csv"),
                      dtype={'muncode': str})
 
-d = ev.dropna(subset=['yield', 'pred']).merge(
+ev = ev.dropna(subset=['yield', 'pred']).copy()
+# deployed AEF Hist Ens. SHRINK predictions (lambda = 0.74, Sec 3.6) -- the
+# paper's headline specification; Spearman panels are shrink-invariant but the
+# pooled within-R2 is not.
+lam = 0.74
+_g  = ev.groupby('muncode')['pred']
+ev['pred'] = _g.transform('mean') + lam * (ev['pred'] - _g.transform('mean'))
+
+d = ev.merge(
     trust[['muncode', 'trust_index', 'aef_spread']], on='muncode', how='inner')
 # keep muns with >=5 ADCs (stable within-mun stats)
 cnt = d.groupby('muncode')['yield'].transform('size')

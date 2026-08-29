@@ -143,6 +143,12 @@ ORDER = ["NDVI", "AEF mean", "Agg-NN", "AEF Hist", "AEF Hist Ens.",
          "Agg-NN (census-trained)",
 ]
 
+# 2026-08-28: evaluate every panel on the ensemble-eligible sample (ADCs with at
+# least one cropland pixel, i.e. where the AEF Hist Ensemble is defined), matching
+# the main accuracy tables.
+gt = gt[gt["AEF Hist Ens."].notna()].reset_index(drop=True)
+print(f"restricted to ensemble-eligible sample: {len(gt):,} ADCs")
+
 def f3(v):
     if v is None or not np.isfinite(v): return "---"
     return (f"{v:.3f}").replace("-", "$-$") if v < 0 else f"{v:.3f}"
@@ -151,7 +157,9 @@ def f3(v):
 L = [r"\begin{table}[!htbp]", r"\centering",
      r"\caption{Thought experiment: ADC-level yield prediction accuracy when correcting "
      r"toward INEGI census municipality yields vs.\ SIAP municipality yields, for all models. "
-     r"All evaluated against the INEGI 2022 census at the ADC level (combined season). "
+     r"All evaluated against the INEGI 2022 census at the ADC level (combined season), "
+     r"on the ADCs for which the AEF Hist Ensemble is defined (see the sample "
+     r"accounting in the appendix). "
      r"``+ Shrink'' rows additionally scale each ADC's predicted deviation from its "
      r"municipality-mean prediction by the deployed $\lambda = 0.74$ (Section~\ref{sec:shrink}). RMSE in t/ha.}",
      r"\label{tab:census_thought}", r"\footnotesize", r"\begin{tabular}{lrrrrr}", r"\hline",
