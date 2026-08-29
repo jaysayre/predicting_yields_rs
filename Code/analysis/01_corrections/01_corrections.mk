@@ -14,7 +14,8 @@ corrections: \
 	$(PREDS_DIR)/adc_gp_yield_preds_2022.csv \
 	$(PREDS_DIR)/adc_alpha_earth_preds_maize_irrig_adj.parquet \
 	$(PLOTS_DIR)/maizeyield_mun_pred_allmx_nolegend_2022.png \
-	$(PLOTS_DIR)/siap_mun_vs_adc_census_yield.pdf
+	$(PLOTS_DIR)/siap_mun_vs_adc_census_yield.pdf \
+	$(PLOTS_DIR)/maizeyield_adc_mun_diff.png
 
 # Additive correction + yield maps (Figures 1, 3, 5, 6)
 $(PREDS_DIR)/adc_yield_preds_corrected_2022.csv: $(TASK_DIR)/1_plot_yields_ADC_mun.ipynb
@@ -40,3 +41,8 @@ $(PLOTS_DIR)/maizeyield_mun_pred_allmx_nolegend_2022.png: $(TASK_DIR)/plot_yield
 # Writes the PDF to plots/ and directly to Overleaf figures/.
 $(PLOTS_DIR)/siap_mun_vs_adc_census_yield.pdf: $(TASK_DIR)/3_plot_siap_vs_adc_census_scatter.ipynb $(PREDS_DIR)/adc_aef_hist_ens_eval.parquet
 	cd $(DATA_DIR) && $(MPC_ENV) $(NB_EXEC) $<
+
+# Figure 1 panel (f): ADC census yield minus municipality census average,
+# Oaxaca inset (difference of panels d and c; CA2007 on 2016 AMCA polygons).
+$(PLOTS_DIR)/maizeyield_adc_mun_diff.png: $(TASK_DIR)/fig1_oaxaca_diff_map.py
+	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
