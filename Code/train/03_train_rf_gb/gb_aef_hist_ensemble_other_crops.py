@@ -407,7 +407,7 @@ for line in old_lines:
     for crop_name in CROP_SEASONS:
         crop_disp = {'Sugar': 'Sugarcane'}.get(crop_name, crop_name)
         if f"{crop_disp} & SIAP" in line:
-            new_lines.extend(hist_ens_rows(crop_name))
+            new_lines.extend(hist_ens_rows(crop_disp))   # results are stored under the display name
             break
     new_lines.append(line)
 
