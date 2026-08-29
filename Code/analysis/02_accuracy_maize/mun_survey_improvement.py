@@ -54,15 +54,16 @@ sm['yield_siap'] = sm['q'] / sm['ha']
 
 AGG = [  # (label, file, col, shrink_lambda) — NDVI row is the cropland-masked
          # aefn2 baseline (partial_masked_mun_train_adc_eval.py); it replaced the
-         # two unmasked h3 harmonic variants on 2026-08-15. shrink_lambda is each
-         # model's cross-validated within-municipality lambda from the main
-         # accuracy tables (combined season); the Shrink (agg.) rows (2026-08-26)
-         # aggregate the shrunk ADC predictions with the same ex-ante weights.
-    ("NDVI\\ (agg.)", "adc_aefn2_masked_preds.parquet",     "pred",       0.417),
-    ("AEF mean (agg.)",       "adc_alpha_earth_preds.csv",       "yield_pred", 0.558),
-    ("AEF Hist (agg.)",       "adc_aef_hist_gb_preds.parquet",   "yield_pred", 0.608),
-    ("AEF Hist Ens.\\ (agg.)", "adc_aef_hist_ens_preds.parquet",  "pred",       0.669),
-    ("Agg-NN (agg.)",         "adc_mlp_yield_preds.csv",         "pred_yield", 0.296),
+         # two unmasked h3 harmonic variants on 2026-08-15. shrink_lambda is the
+         # deployed lambda = 0.74 for every model (public irrigation-projection
+         # point estimate, Sec 3.6; switched from per-model census-CV lambdas
+         # 2026-08-28); the Shrink (agg.) rows aggregate the shrunk ADC
+         # predictions with the same ex-ante weights.
+    ("NDVI\\ (agg.)", "adc_aefn2_masked_preds.parquet",     "pred",       0.74),
+    ("AEF mean (agg.)",       "adc_alpha_earth_preds.csv",       "yield_pred", 0.74),
+    ("AEF Hist (agg.)",       "adc_aef_hist_gb_preds.parquet",   "yield_pred", 0.74),
+    ("AEF Hist Ens.\\ (agg.)", "adc_aef_hist_ens_preds.parquet",  "pred",       0.74),
+    ("Agg-NN (agg.)",         "adc_mlp_yield_preds.csv",         "pred_yield", 0.74),
 ]
 def load(f, col):
     d = pd.read_parquet(os.path.join(P, f)) if f.endswith("parquet") else pd.read_csv(os.path.join(P, f))
@@ -134,8 +135,8 @@ L = [r"\begin{table}[!htbp]", r"\centering",
      r"aggregated to the municipality level weighting each ADC by its \emph{ex-ante} agricultural-land "
      r"area (a proxy for maize area that does not use the census), except NDVI\ GB (mun.), which is "
      r"trained directly at the municipality level (random municipality-year cross-validation). "
-     r"Shrink (agg.)\ rows first apply each model's within-municipality shrinkage exactly as in the "
-     r"main accuracy tables (cross-validated $\lambda$, deployable from predictions alone), then "
+     r"Shrink (agg.)\ rows first apply the deployed within-municipality shrinkage "
+     r"($\lambda = 0.74$, deployable from predictions alone), then "
      r"aggregate the shrunk ADC predictions with the same ex-ante weights. RMSE in t/ha.}", r"\label{tab:mun_agg_results}",
      r"\begin{tabular}{lrrr}", r"\hline",
      r"\multicolumn{4}{l}{\textit{Panel A: vs.\ INEGI Census (aggregated)}} \\", r"\hline",

@@ -341,7 +341,7 @@ for crop_name, season in CROP_SEASONS.items():
     m_corr = eval_row(df, 'yield', corr_col, f'{crop_name} AEF Hist Ens. Corr.')
 
     # within-municipality shrinkage (leave-municipalities-out CV lambda)
-    lam = cv_lambda(df, pcol, 'yield')
+    lam = 0.74   # deployed public point estimate (Sec 3.6)
     shr_col = f'pred_{crop_name}_shrink'
     df[shr_col] = apply_shrink(df, pcol, lam) if np.isfinite(lam) else df[pcol]
     m_shr = eval_row(df, 'yield', shr_col, f'{crop_name} AEF Hist Ens. Shrink (lam={lam:.2f})')

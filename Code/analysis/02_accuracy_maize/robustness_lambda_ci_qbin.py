@@ -81,7 +81,7 @@ for season, ycol in [("PV", "yield_pv"), ("combined", "yield")]:
         "at_0.5": curve[0.5], "at_0.6": curve[0.6], "at_0.7": curve[0.7]}
 
 # ── B. bootstrap CIs (PV season, cluster = municipality) ─
-LAM_ENS, LAM_HIST =  0.669, 0.608
+LAM_ENS, LAM_HIST =  0.74, 0.74   # deployed public point estimate
 d =  ev.copy()
 d["ens_sh"]  =  shrink(d, "pred", LAM_ENS)
 d["hist_sh"] =  shrink(d, "pred_hist", LAM_HIST)
@@ -140,15 +140,13 @@ out["boot_PV_ens_raw_full"] =  {"overall_CI": ci(o_r), "within_CI": ci(w_r)}
 cq =  ev.dropna(subset=["yield", "pred", "pred_qbin"]).copy()
 res =  {}
 for name, col in [("fixed", "pred"), ("qbin", "pred_qbin")]:
-    # cv lambda quickly: use grid max as proxy (report both)
-    best = None
-    for lam in np.round(np.arange(0, 1.01, 0.05), 2):
-        cq["_s"] =  shrink(cq, col, lam)
-        m =  metrics(cq, "yield", "_s")
-        if best is None or m["Wtn"] > best[1]["Wtn"]: best = (float(lam), m)
+    # deployed lambda = 0.74 for both variants (public point estimate, Sec 3.6;
+    # was the in-sample grid optimum)
+    lam_dep =  0.74
+    cq["_s"] =  shrink(cq, col, lam_dep)
     res[name] =  {"raw": metrics(cq, "yield", col),
-                  "shrink_lam": best[0], "shrink": best[1]}
-    cq["_spv"] =  shrink(cq, col, best[0])
+                  "shrink_lam": lam_dep, "shrink": metrics(cq, "yield", "_s")}
+    cq["_spv"] =  shrink(cq, col, lam_dep)
     res[name]["shrink_PV"] =  metrics(cq.dropna(subset=["yield_pv"]), "yield_pv", "_spv")
     res[name]["raw_PV"]    =  metrics(cq.dropna(subset=["yield_pv"]), "yield_pv", col)
 out["qbin_vs_fixed_common"] =  {"N": int(len(cq)), **res}

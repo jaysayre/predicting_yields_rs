@@ -41,6 +41,7 @@ def met(df, ycol, pcol):
     s = df[[ycol, pcol, "muncode"]].replace([np.inf, -np.inf], np.nan).dropna()
     return (len(s), r2(s[ycol], s[pcol]), between_r2(s, ycol, pcol),
             within_r2(s, ycol, pcol), np.sqrt(np.mean((s[ycol].values-s[pcol].values)**2)))
+LAM_DEPLOY = 0.74   # deployed shrinkage factor: public irrigation-projection point estimate (Sec 3.6)
 def cv_lambda(df, pcol, ycol, gc="muncode"):
     s = df[[ycol, pcol, gc]].replace([np.inf, -np.inf], np.nan).dropna().copy()
     cnt = s.groupby(gc)[ycol].transform("size"); s = s[cnt >= 2].reset_index(drop=True)
@@ -161,7 +162,7 @@ def model_rows(label, season_y):
     rows = []
     raw = met(ev, season_y, label); rows.append((f"{label} Raw", raw, boot_ci(ev, season_y, label)))
     ev["_c"] = correct(ev, label); cr = met(ev, season_y, "_c"); rows.append((f"{label} Corr.", cr, boot_ci(ev, season_y, "_c")))
-    lam = cv_lambda(ev, label, season_y); ev["_s"] = shrink(ev, label, lam)
+    lam = LAM_DEPLOY; ev["_s"] = shrink(ev, label, lam)
     sh = met(ev, season_y, "_s"); rows.append((f"{label} Shrink", sh, boot_ci(ev, season_y, "_s")))
     return rows
 
@@ -242,7 +243,7 @@ def build_common_sample_table(season_y, label_season, fname, tag):
     def emit(group):
         for nm,_,_ in group:
             raw =  met(cs, season_y, nm)
-            lam =  cv_lambda(cs, nm, season_y); cs["_s"] =  shrink(cs, nm, lam)
+            lam =  LAM_DEPLOY; cs["_s"] =  shrink(cs, nm, lam)
             sh  =  met(cs, season_y, "_s")
             for tagn, m in [(f"{nm} Raw", raw), (f"{nm} Shrink", sh)]:
                 n, ov, bt, wt, rm = m

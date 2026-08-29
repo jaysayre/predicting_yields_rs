@@ -11,7 +11,7 @@ The Census correction isolates the effect of training/anchoring on cleaner
 
 Each correction row is followed by a "+ Shrink" counterpart that additionally
 scales the ADC-level deviations from the municipality-mean prediction by the
-leave-municipalities-out cross-validated lambda* = rho/r (same machinery as
+deployed lambda = 0.74 (public point estimate, Sec 3.6; was census-CV, same machinery as
 within_mun_shrink_all_models.py), so the table also reports the shrink
 estimates under each anchoring choice.
 
@@ -153,7 +153,7 @@ L = [r"\begin{table}[!htbp]", r"\centering",
      r"toward INEGI census municipality yields vs.\ SIAP municipality yields, for all models. "
      r"All evaluated against the INEGI 2022 census at the ADC level (combined season). "
      r"``+ Shrink'' rows additionally scale each ADC's predicted deviation from its "
-     r"municipality-mean prediction by a leave-municipalities-out cross-validated $\lambda$. RMSE in t/ha.}",
+     r"municipality-mean prediction by the deployed $\lambda = 0.74$ (Section~\ref{sec:shrink}). RMSE in t/ha.}",
      r"\label{tab:census_thought}", r"\footnotesize", r"\begin{tabular}{lrrrrr}", r"\hline",
      r"Model & $N$ & $R^2$ & Between $R^2$ & Within $R^2$ & RMSE \\", r"\hline"]
 
@@ -168,7 +168,7 @@ for label in ORDER:
     for tag, pcol in [("Raw", "raw"),
                       (r"Corr.\ ($\rightarrow$ SIAP)", "cs"),
                       (r"Corr.\ ($\rightarrow$ Census)", "cc")]:
-        lam = cv_lambda(sub, pcol)
+        lam = 0.74   # deployed public point estimate (Sec 3.6)
         sub[pcol + "_s"] = apply_shrink(sub, pcol, lam)
         for t, pc, l in [(tag, pcol, ""), (tag + " + Shrink", pcol + "_s", f"{lam:.2f}")]:
             m = metrics(sub, pc)

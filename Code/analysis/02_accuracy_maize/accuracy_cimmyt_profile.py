@@ -692,7 +692,7 @@ _ens = eval_group(_tbl, 'AEF Hist Ensemble', ycol='yield_cimmyt', pcol='pred')
 # Shrink row: within-municipality shrinkage exactly as deployed in the ADC
 # pipeline — a-priori lambda = 2/3 (Sec 3.6), fixed ex-ante with respect to the
 # CIMMYT data. Deviations from the municipality-year mean prediction.
-_LAM_DEPLOY = 2/3
+_LAM_DEPLOY = 0.74
 _gm = _tbl.groupby(['muncode', 'year'])['pred'].transform('mean')
 _tbl['pred_shrink'] = _gm + _LAM_DEPLOY * (_tbl['pred'] - _gm)
 _ens_sh = eval_group(_tbl, 'AEF Hist Ensemble Shrink',
@@ -778,7 +778,7 @@ _tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to plot-level AEF features. CIMMY
          r"$ [95\% CI "
          f"{_wtn_lo:.3f}, {_wtn_hi:.3f}"
          r"] is its marginal plot-level skill beyond the municipal anchor. The Shrink row "
-         r"applies the deployed $\lambda = 2/3$ (Section~\ref{sec:shrink}), fixed ex ante "
+         r"applies the deployed $\lambda = 0.74$ (Section~\ref{sec:shrink}), estimated from public data and ex ante "
          r"with respect to the CIMMYT data. Panel B groups plots by their "
          r"municipality-year's mean CIMMYT-to-SIAP yield ratio, an indicator of how "
          r"representative local trial yields are of area averages.}"

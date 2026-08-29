@@ -121,7 +121,7 @@ def load_values():
     ens =  pd.read_parquet(ens_path)[["adc", "muncode", "yield", "pred"]].copy()
     ens["adc"] =  ens["adc"].astype(str)
     ens["muncode"] =  ens["muncode"].astype(str).str.zfill(5)
-    lam =  cv_lambda(ens, "pred", "yield")
+    lam =  0.74   # deployed public point estimate (Sec 3.6)
     ens["pred_shrink"] =  shrink(ens, "pred", lam)
     print(f"[2] AEF Hist Ens. shrinkage lambda = {lam:.3f}")
 
