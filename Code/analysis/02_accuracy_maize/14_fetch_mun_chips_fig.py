@@ -19,7 +19,7 @@ Outputs (Data/alpha_earth/):
   aef_chip_mun{code}_2022.npy    (64 x N x N float32)
   rgb_chip_mun{code}_2022.npy    (N x N x 3 float32, S2 SR reflectance)
   fig2_mun_chips_meta.json       (per-mun bbox, center, yield)
-Run: ~/miniforge3/envs/geo_env/bin/python fetch_mun_chips_fig.py
+Run: ~/miniforge3/envs/geo_env/bin/python 14_fetch_mun_chips_fig.py
 """
 import io
 import os

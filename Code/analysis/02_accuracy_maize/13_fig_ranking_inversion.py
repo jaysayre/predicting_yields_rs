@@ -8,7 +8,7 @@ Municipality-level R^2 from Table 1 (held-out municipalities, vs SIAP); farm-lev
 pooled within-municipality R^2 from exante_trust_across_models.csv.
 
 Output: plots/coauthor_extras_paper/fig_ranking_inversion.pdf (pgf/Times)
-Run:    ~/miniforge3/envs/geo_env/bin/python fig_ranking_inversion.py
+Run:    ~/miniforge3/envs/geo_env/bin/python 13_fig_ranking_inversion.py
 """
 import os
 import numpy as np

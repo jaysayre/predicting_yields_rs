@@ -10,7 +10,7 @@ model's within-municipality skill out-of-sample. The trust index is therefore a
 tool for ex-ante model selection, not just targeting of a single model.
 
 Output: plots/coauthor_extras_paper/exante_trust_across_models.csv
-Run:    ~/miniforge3/envs/geo_env/bin/python exante_trust_across_models.py
+Run:    ~/miniforge3/envs/geo_env/bin/python 11_exante_trust_across_models.py
 """
 import os, numpy as np, pandas as pd, warnings
 warnings.filterwarnings("ignore")

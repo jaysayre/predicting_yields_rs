@@ -5,12 +5,12 @@ Investigates which subsets of CIMMYT plots have better/worse predictions,
 profiling by: state, year, yield level, proximity to SIAP municipal mean,
 number of plots per municipality, and CIMMYT management characteristics.
 
-Prerequisites: run accuracy_cimmyt_plot_level.py first (or at least have
+Prerequisites: (superseded dep/accuracy_cimmyt_plot_level.py; at least have
 the three CIMMYT parquets and SIAP data available).
 
 Usage:
   source /usr/local/anaconda3/etc/profile.d/conda.sh && conda activate mpc_env
-  python3 accuracy_cimmyt_profile.py
+  python3 8_accuracy_cimmyt_profile.py
 """
 import os, sys, time, warnings
 import numpy as np
@@ -784,11 +784,11 @@ _tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to plot-level AEF features. CIMMY
          r"representative local trial yields are of area averages.}"
          "\n\\end{table}\n")
 
-for _dest in [os.path.join(table_dir, "accuracy_cimmyt_profile.tex"),
-              os.path.join(overleaf, "accuracy_cimmyt_profile.tex")]:
-    os.makedirs(os.path.dirname(_dest), exist_ok=True)
-    with open(_dest, 'w') as _f:
-        _f.write(_tex)
-    print(f"  wrote {_dest}")
+# tables/ only; 04_copy_to_overleaf is the single road to Overleaf
+_dest = os.path.join(table_dir, "accuracy_cimmyt_profile.tex")
+os.makedirs(os.path.dirname(_dest), exist_ok=True)
+with open(_dest, 'w') as _f:
+    _f.write(_tex)
+print(f"  wrote {_dest}")
 
 print(f"\nRuntime: {(time.time()-t0)/60:.1f} min")

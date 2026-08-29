@@ -1,5 +1,8 @@
 ### 04_copy_to_overleaf.mk
-# Copy all tables and figures to Overleaf directory
+# Copy all tables and figures to Overleaf — THE single road into the paper.
+# No generator writes to Overleaf directly (enforced 2026-08-28); everything
+# below is produced by stages 01-03 (and train/05 for Table 1) into plots/ or
+# tables/ and copied here.
 SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR   := $(PROJ_DIR)/Code
@@ -20,7 +23,7 @@ copy_to_overleaf:
 	cp "$(TABLES_DIR)/accuracy_other_crops_adc_2022.tex" "$(OVERLEAF_DIR)/"
 	cp "$(PLOTS_DIR)/common_sample_combined_2022.tex"        "$(OVERLEAF_DIR)/"
 	cp "$(PLOTS_DIR)/common_sample_spring_summer_2022.tex"   "$(OVERLEAF_DIR)/"
-	# accuracy_other_crops_mun_2022.tex (Table 8) cut from the paper (2026-06-10)
+	cp "$(TABLES_DIR)/accuracy_other_crops_mun_2022.tex" "$(OVERLEAF_DIR)/"
 	cp "$(TABLES_DIR)/accuracy_mun_level_2022.tex"           "$(OVERLEAF_DIR)/"
 	cp "$(TABLES_DIR)/validation_mun_level_2022.tex"          "$(OVERLEAF_DIR)/"
 	cp "$(TABLES_DIR)/census_thought_experiment_2022.tex"    "$(OVERLEAF_DIR)/"

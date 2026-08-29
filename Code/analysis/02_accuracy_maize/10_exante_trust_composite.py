@@ -19,10 +19,10 @@ used ONLY to VALIDATE the index --- to check that it orders realized
 within-municipality skill --- never to construct or weight it.
 
 Outputs (under plots/coauthor_extras_paper/):
-  exante_trust_index.csv          (adds the unsupervised `trust_index` column)
-  exante_trust_across_models.csv  (model pooled within-R2 + composite corr.)
+  exante_trust_index.csv          (adds trust_index; refreshes within_r2_mun
+                                   from the deployed Shrink predictions)
 
-Run:  ~/miniforge3/envs/geo_env/bin/python exante_trust_composite.py
+Run:  ~/miniforge3/envs/geo_env/bin/python 10_exante_trust_composite.py
 """
 import os, numpy as np, pandas as pd, warnings
 warnings.filterwarnings("ignore")
@@ -98,47 +98,5 @@ for feat in ["log_n_adc", "aef_spread", "irrig_share_sd", "aef_eff_dim"]:
     dd = D[[feat, "within_r2_mun"]].dropna()
     print(f"  {feat:16s} rho = {spearmanr(dd[feat], dd['within_r2_mun']).correlation:+.3f}")
 
-# ── cross-model: same single index vs EACH model's realized within-skill ──
-# 2026-08-26: single cropland-masked NDVI baseline (aefn2) replaces the two
-# unmasked h3 variants, matching the main accuracy tables.
-MODELS = [("NDVI", "adc_aefn2_masked_preds.parquet", "pred"),
-          ("AEF mean", "adc_alpha_earth_preds.csv", "yield_pred"),
-          ("Agg-NN", "adc_mlp_yield_preds.csv", "pred_yield"),
-          ("AEF Hist", "adc_aef_hist_gb_preds.parquet", "yield_pred"),
-          ("AEF Hist Ens.", None, None)]
-base = ev.rename(columns={"pred": "AEF Hist Ens."})
-for nm, f, c in MODELS:
-    if f is None: continue
-    d = pd.read_parquet(os.path.join(P, f)) if f.endswith("parquet") else pd.read_csv(os.path.join(P, f))
-    if "year" in d.columns: d = d[d["year"] == 2022]
-    k = "adc" if "adc" in d.columns else "adcid"
-    d["adc"] = d[k].astype(str).str.replace("-", "", regex=False)
-    base = base.merge(d[["adc", c]].rename(columns={c: nm}).dropna().drop_duplicates("adc"), on="adc", how="left")
-
-def pooled_within(p):
-    s = base[["muncode", "yield", p]].dropna()
-    cnt = s.groupby("muncode")["yield"].transform("size"); s = s[cnt >= 2]
-    a = (s["yield"] - s.groupby("muncode")["yield"].transform("mean")).values
-    b = (s[p] - s.groupby("muncode")[p].transform("mean")).values
-    return 1 - np.sum((a - b)**2) / np.sum(a * a)
-
-def per_mun_within(p):
-    rows = []
-    for m, g in base.dropna(subset=["yield", p]).groupby("muncode"):
-        if len(g) < 5: continue
-        a = g["yield"] - g["yield"].mean(); b = g[p] - g[p].mean()
-        if (a**2).sum() > 0: rows.append((m, 1 - ((a - b)**2).sum() / (a**2).sum()))
-    return pd.DataFrame(rows, columns=["muncode", "wr2"])
-
-res = []
-for nm, _, _ in MODELS:
-    pw = pooled_within(nm)
-    pm = per_mun_within(nm).merge(D[["muncode", "trust_index"]], on="muncode", how="inner").dropna()
-    corr = np.corrcoef(pm["trust_index"], pm["wr2"].clip(-2, 1))[0, 1]
-    res.append({"model": nm, "pooled_within_r2": round(pw, 3),
-                "trust_corr": round(corr, 3), "n_mun": len(pm)})
-df = pd.DataFrame(res).sort_values("pooled_within_r2", ascending=False)
-print("\n── Same ex-ante index vs each model's realized within-skill ──")
-print(df.to_string(index=False))
-df.to_csv(os.path.join(out, "exante_trust_across_models.csv"), index=False)
-print(f"\nWrote {os.path.join(out, 'exante_trust_across_models.csv')}")
+# Cross-model validation lives in 11_exante_trust_across_models.py, the sole
+# producer of exante_trust_across_models.csv (RF-based; the numbers the paper quotes).

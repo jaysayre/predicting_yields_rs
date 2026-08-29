@@ -160,14 +160,14 @@ def train_ndvi(features):
 # variants above with a single row. Features are the ADC-level aefn2 features
 # aggregated to muni-year (area-weighted by the SIAP ag-land proxy) — a
 # muni-level cropland extraction was never run. The cache is built by
-# analysis/02_accuracy_maize/masked_muni_cv.py; run that first.
+# analysis/02_accuracy_maize/1_masked_muni_cv.py; run that first.
 def train_ndvi_masked():
     t  =  time.time()
     cache  =  os.path.join(proj_dir, "Data", "cropland_features",
                            "muni_aefn2_masked.parquet")
     if not os.path.exists(cache):
         print(f"\nNDVI: SKIPPED — {os.path.basename(cache)} not found; "
-              f"run analysis/02_accuracy_maize/masked_muni_cv.py first")
+              f"run analysis/02_accuracy_maize/1_masked_muni_cv.py first")
         return
     feats            =  pd.read_parquet(cache)
     feats['muncode'] =  feats['muncode'].astype(str).str.zfill(5)

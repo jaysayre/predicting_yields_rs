@@ -14,7 +14,7 @@ INEGI 2022 census at the ADC level (combined = yield, spring-summer = yield_pv).
 This consolidates the previously hand-assembled tables into one reproducible
 script and makes every model's correction use the same ex-ante weighting.
 
-Run:  ~/miniforge3/envs/geo_env/bin/python accuracy_main_2022.py
+Run:  ~/miniforge3/envs/geo_env/bin/python 4_accuracy_main_2022.py
 """
 import os, numpy as np, pandas as pd, warnings
 warnings.filterwarnings("ignore")

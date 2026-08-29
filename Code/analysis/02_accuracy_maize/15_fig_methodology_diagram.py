@@ -1,5 +1,8 @@
 """
-Figure 2 methodology diagram, v2 (two rows).
+Figure 2 methodology diagram (two rows).
+
+Step 15 of the accuracy chain; prerequisite chips fetched by
+14_fetch_mun_chips_fig.py. Supersedes dep/fig_methodology_diagram.py (v1).
 
 Top row (inputs / the problem):
   A  Maize yields across Mexico (SIAP mun choropleth), two example muns outlined
@@ -17,10 +20,10 @@ Two example municipalities (problem_statement.png; SIAP maize Spring-Summer 2022
   20517  Santo Domingo Tepuxtepec, OAX   1.30 t/ha   114 km2    (low)
   03001  Comondu, BCS                    6.87 t/ha  18156 km2    (high)
 
-Assets from fetch_mun_chips_fig.py (rgb_/aef_chip_mun*_2022.npy + meta json).
+Assets from 14_fetch_mun_chips_fig.py (rgb_/aef_chip_mun*_2022.npy + meta json).
 
 Output: plots/fig_methodology_diagram.pdf (+ .png)   [replaces the v1 figure]
-Run:    ~/miniforge3/envs/geo_env/bin/python fig_methodology_diagram_v2.py
+Run:    ~/miniforge3/envs/geo_env/bin/python 15_fig_methodology_diagram.py
 """
 import os
 import json

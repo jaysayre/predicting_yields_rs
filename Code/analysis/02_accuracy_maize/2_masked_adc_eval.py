@@ -21,7 +21,7 @@ Procedure (mirrors harmonic_adc_eval.py):
   4. additive ex-post correction with the ex-ante ag-land weight
   5. report N / R2 / Between / Within / RMSE, raw and corrected
 
-Run: ~/miniforge3/envs/geo_env/bin/python partial_masked_mun_train_adc_eval.py
+Run: ~/miniforge3/envs/geo_env/bin/python 2_masked_adc_eval.py
 """
 import os, sys, glob, warnings
 import numpy  as np
@@ -148,7 +148,7 @@ def main():
     print(f"[4] predicted {len(pe):,} ADCs in {EVAL_YEAR} "
           f"(states {sorted(pe['muncode'].str[:2].unique())})")
 
-    # save raw ADC preds for the accuracy-table pipeline (accuracy_main_2022.py):
+    # save raw ADC preds for the accuracy-table pipeline (4_accuracy_main_2022.py):
     # this is the masked aefn2 NDVI baseline replacing the h3 NDVI Hist rows
     pred_dir =  os.path.join(data_dir, "predictions")
     pe[["adcid", "year", "pred"]].to_parquet(
@@ -163,7 +163,7 @@ def main():
     # 2026-08-15). Previously one Spring-Summer anchor was used for both rows,
     # so the combined-season row was corrected against a Spring-Summer mean --
     # a season mismatch that cost ~0.13 R2 (0.391 vs the correct 0.517) and made
-    # this script disagree with accuracy_main_2022.py. Same defect, opposite
+    # this script disagree with 4_accuracy_main_2022.py. Same defect, opposite
     # direction, as the one fixed there.
     #   combined `yield`  -> SIAP all seasons summed
     #   P-V `yield_pv`    -> SIAP Spring-Summer only

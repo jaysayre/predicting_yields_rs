@@ -332,7 +332,7 @@ siap_mun = siap_mun[
 # above sums ALL growing seasons, which is right for the combined-season target
 # (`yield`) but a season mismatch for the P-V target (`yield_pv`): it removes a
 # bias defined on a different quantity than the one being scored, and inflates
-# the P-V corrected R2. Same defect fixed in accuracy_main_2022.py, where it was
+# the P-V corrected R2. Same defect fixed in 4_accuracy_main_2022.py, where it was
 # worth ~0.08 R2 on that row.
 siap_mun_pv = siap_2022[siap_2022['growing_season'] == SEASON].groupby('muncode').agg(
     {'q': 'sum', 'ha_planted': 'sum'}

@@ -11,7 +11,7 @@ under the benchmark sections of Tables \ref{tab:accuracy_combined} /
 \ref{tab:accuracy_spring_summer}.
 
 Output:  Data/predictions/oracle_ceiling_2022.csv   (season,N,R2,Btw,Wtn,RMSE)
-Run:     ~/miniforge3/envs/geo_env/bin/python oracle_adc_ceiling.py
+Run:     ~/miniforge3/envs/geo_env/bin/python 3_oracle_adc_ceiling.py
 """
 import os, warnings, numpy as np, pandas as pd
 warnings.filterwarnings("ignore")

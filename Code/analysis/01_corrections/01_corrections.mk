@@ -1,5 +1,11 @@
 ### 01_corrections.mk
-# Post-prediction corrections (additive, GP, irrigation)
+# Post-prediction corrections + Figure 1/5/6/7 maps. Scripts run in step order:
+#   1_plot_yields_ADC_mun.ipynb        CA07 census maps (Fig 1 a-d) + corrected csv
+#   2_plot_siap_vs_adc_census_scatter  Fig 1 panel (e)
+#   3_plot_yields_ca22_maps.py         CA22 prediction/error maps (Figs 5-7)
+#   4_fig1_oaxaca_diff_map.py          Fig 1 panel (f)
+# dep/ holds the retired GP-correction chain and the unconsumed irrigation
+# adjustment (neither appears in the paper).
 SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
@@ -11,38 +17,25 @@ PLOTS_DIR := $(DATA_DIR)/plots
 .PHONY: corrections
 corrections: \
 	$(PREDS_DIR)/adc_yield_preds_corrected_2022.csv \
-	$(PREDS_DIR)/adc_gp_yield_preds_2022.csv \
-	$(PREDS_DIR)/adc_alpha_earth_preds_maize_irrig_adj.parquet \
-	$(PLOTS_DIR)/maizeyield_mun_pred_allmx_nolegend_2022.png \
 	$(PLOTS_DIR)/siap_mun_vs_adc_census_yield.pdf \
+	$(PLOTS_DIR)/maizeyield_mun_pred_allmx_nolegend_2022.png \
 	$(PLOTS_DIR)/maizeyield_adc_mun_diff.png
 
-# Additive correction + yield maps (Figures 1, 3, 5, 6)
+# Step 1 — additive correction + CA07 census yield maps (Figure 1 panels a-d)
 $(PREDS_DIR)/adc_yield_preds_corrected_2022.csv: $(TASK_DIR)/1_plot_yields_ADC_mun.ipynb
 	cd $(DATA_DIR) && $(MPC_ENV) $(NB_EXEC) $<
 
-# Gaussian Process correction
-$(PREDS_DIR)/adc_gp_yield_preds_2022.csv: $(TASK_DIR)/2_gp_correction_2022.ipynb $(PREDS_DIR)/adc_yield_preds_corrected_2022.csv
+# Step 2 — Figure 1 panel (e): SIAP municipal yield vs ADC census yield hexbin
+$(PLOTS_DIR)/siap_mun_vs_adc_census_yield.pdf: $(TASK_DIR)/2_plot_siap_vs_adc_census_scatter.ipynb $(PREDS_DIR)/adc_aef_hist_ens_eval.parquet
 	cd $(DATA_DIR) && $(MPC_ENV) $(NB_EXEC) $<
 
-# Irrigation adjustment
-$(PREDS_DIR)/adc_alpha_earth_preds_maize_irrig_adj.parquet: $(TASK_DIR)/irrigation_adjustment.py
-	cd $(DATA_DIR) && $(ML_ENV) python3 $<
-
-# ── CA22 prediction & error maps (Figures 5–7 + municipal SIAP/pred pair) ──
-# AEF Hist Ens. Shrink predictions + error maps on Census-Ag-2022 yields, and
-# the _2022 municipal SIAP-vs-predicted pair. The CA07 census-yield maps
-# (Figure 1) stay with 1_plot_yields_ADC_mun.ipynb; pass --census-maps to the
-# script only if you deliberately want CA22 versions of those.
-$(PLOTS_DIR)/maizeyield_mun_pred_allmx_nolegend_2022.png: $(TASK_DIR)/plot_yields_ca22_maps.py
+# Step 3 — CA22 prediction & error maps (Figures 5-7 + municipal SIAP/pred pair).
+# The CA07 census-yield maps (Figure 1) stay with step 1; pass --census-maps to
+# this script only if you deliberately want CA22 versions of those.
+$(PLOTS_DIR)/maizeyield_mun_pred_allmx_nolegend_2022.png: $(TASK_DIR)/3_plot_yields_ca22_maps.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# Figure 1 panel (e): SIAP municipal yield vs ADC census yield hexbin.
-# Writes the PDF to plots/ and directly to Overleaf figures/.
-$(PLOTS_DIR)/siap_mun_vs_adc_census_yield.pdf: $(TASK_DIR)/3_plot_siap_vs_adc_census_scatter.ipynb $(PREDS_DIR)/adc_aef_hist_ens_eval.parquet
-	cd $(DATA_DIR) && $(MPC_ENV) $(NB_EXEC) $<
-
-# Figure 1 panel (f): ADC census yield minus municipality census average,
-# Oaxaca inset (difference of panels d and c; CA2007 on 2016 AMCA polygons).
-$(PLOTS_DIR)/maizeyield_adc_mun_diff.png: $(TASK_DIR)/fig1_oaxaca_diff_map.py
+# Step 4 — Figure 1 panel (f): ADC census yield minus municipality census
+# average, Oaxaca inset (CA2007 yields on the CA2007 ADC polygons)
+$(PLOTS_DIR)/maizeyield_adc_mun_diff.png: $(TASK_DIR)/4_fig1_oaxaca_diff_map.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<

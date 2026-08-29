@@ -14,7 +14,7 @@ and the maps depict exactly the units the paper's results are computed on.
 
 Prediction maps use the paper's best specification: **AEF Hist Ens. with
 within-municipality shrinkage** (combined-season R2 0.598, within-R2 0.225).
-Shrinkage lambda is estimated exactly as in accuracy_main_2022.py (GroupKFold
+Shrinkage lambda is estimated exactly as in 4_accuracy_main_2022.py (GroupKFold
 over municipalities), so the mapped surface matches the Shrink table rows.
 
 Outputs (to Maize_prediction/plots/) — filenames preserved from the CA07 versions
@@ -78,7 +78,7 @@ OAXACA_BBOX =  (-97.2, 16.3, -95.8, 17.6)      # lon/lat window for the inset pa
 os.makedirs(plot_dir, exist_ok=True)
 
 
-# ── Shrinkage (identical to accuracy_main_2022.py) ───────
+# ── Shrinkage (identical to 4_accuracy_main_2022.py) ───────
 def cv_lambda(df, pcol, ycol, gc="muncode"):
     s =  df[[ycol, pcol, gc]].replace([np.inf, -np.inf], np.nan).dropna().copy()
     cnt =  s.groupby(gc)[ycol].transform("size"); s = s[cnt >= 2].reset_index(drop=True)

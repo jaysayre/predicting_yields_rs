@@ -13,7 +13,8 @@ For each crop:
   4. Evaluate vs INEGI 2022 census
   5. Apply additive ex-post correction
 
-Updates the Overleaf other-crops ADC accuracy table.
+Persists per-crop ADC prediction parquets; the paper table is assembled by
+analysis/03_accuracy_other_crops/1_other_crops_adc_table.py.
 
 Usage:
   source /usr/local/anaconda3/etc/profile.d/conda.sh && conda activate mpc_env
@@ -54,8 +55,6 @@ aef_dir    =  os.path.join(proj_dir, "Data", "alpha_earth")
 pred_dir   =  os.path.join(proj_dir, "Data", "predictions")
 inegi_dir  =  os.path.join(proj_dir, "Data", "INEGI", "MD_lab_outputs")
 ca2022_dir =  os.path.join(inegi_dir, "LM2304-CA22-2025-09-29-superficie_ENTREGA")
-overleaf   =  os.path.join(home_dir, "Dropbox", "Overleaf",
-                           "Predicting Yields at Scale using RS")
 siap_path  =  os.path.join(home_dir, "Dropbox", "Projects",
                             "Maize_prediction", "Data", "SIAP", "Cleaned",
                             "siap_ag_prod_estimation_by_season.dta")
@@ -359,7 +358,7 @@ for crop_name, season in CROP_SEASONS.items():
     print(f"  Saved ADC predictions -> {_out_pq}")
 
 
-# -- 3. Print summary & update Overleaf table ----------------
+# -- 3. Print summary rows (assembled into A3 by the analysis stage) --
 print(f"\n\n{'='*70}")
 print("SUMMARY — New rows for accuracy_other_crops_adc_2022.tex")
 print(f"{'='*70}")
@@ -374,53 +373,8 @@ for r in all_adc_results:
     print(f"{r['Crop']} & {r['Model']} & {r['N']:,} & {fmt(r['R2'])} & {fmt(r['Btw'])} & {fmt(r['Wtn'])} & {fmt(r['RMSE'])} \\\\")
 
 
-# -- 4. Read existing table and insert new rows --------------
-# Writes to tables/ ONLY by default (2026-08-16). This script used to overwrite
-# the live Overleaf copy on every run, which makes an exploratory re-run edit the
-# paper silently. Pass --write_overleaf to update it deliberately; the template is
-# still READ from Overleaf so the surrounding table structure is preserved.
-WRITE_OVERLEAF = '--write_overleaf' in sys.argv
-tex_path = os.path.join(overleaf, "accuracy_other_crops_adc_2022.tex")
-proj_tex = os.path.join(proj_dir, "tables", "accuracy_other_crops_adc_2022.tex")
-src_tex  = tex_path if os.path.exists(tex_path) else proj_tex
-print(f"\nBuilding table (template: {src_tex})")
-
-with open(src_tex, 'r') as f:
-    old_lines = f.readlines()
-
-def fmt(v):
-    if np.isnan(v):
-        return "---"
-    return f"$-${abs(v):.3f}" if v < 0 else f"{v:.3f}"
-
-def hist_ens_rows(crop_name):
-    return [f"{r['Crop']} & {r['Model']} & {r['N']:,} & {fmt(r['R2'])} & {fmt(r['Btw'])} "
-            f"& {fmt(r['Wtn'])} & {fmt(r['RMSE'])} \\\\\n"
-            for r in all_adc_results if r['Crop'] == crop_name]
-
-# Idempotent rebuild: drop any previously-inserted AEF Hist Ens rows, then insert
-# the fresh Raw/Corr/Shrink rows just before each crop's SIAP row.
-new_lines = []
-for line in old_lines:
-    if 'AEF Hist Ens' in line:          # remove stale ensemble rows (re-runnable)
-        continue
-    for crop_name in CROP_SEASONS:
-        crop_disp = {'Sugar': 'Sugarcane'}.get(crop_name, crop_name)
-        if f"{crop_disp} & SIAP" in line:
-            new_lines.extend(hist_ens_rows(crop_disp))   # results are stored under the display name
-            break
-    new_lines.append(line)
-
-os.makedirs(os.path.dirname(proj_tex), exist_ok=True)
-with open(proj_tex, 'w') as f:
-    f.writelines(new_lines)
-print(f"  Saved: {proj_tex}")
-
-if WRITE_OVERLEAF:
-    with open(tex_path, 'w') as f:
-        f.writelines(new_lines)
-    print(f"  Updated Overleaf: {tex_path}")
-else:
-    print("  Overleaf copy NOT touched (pass --write_overleaf to update it)")
+# Table assembly moved to analysis/03_accuracy_other_crops/1_other_crops_adc_table.py
+# (2026-08-28): this script now only trains and persists the per-crop ADC
+# prediction parquets; the analysis stage owns every paper .tex.
 
 print(f"\nTotal runtime: {(time.time()-t0)/60:.1f} min")

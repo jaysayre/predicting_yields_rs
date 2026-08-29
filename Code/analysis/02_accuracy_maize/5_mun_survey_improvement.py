@@ -14,7 +14,7 @@ sub-region"). The census municipal yield used as the benchmark target is still
 the census's own reported yield (total volume / total planted area); only the
 weights used to combine PREDICTIONS are held ex-ante.
 
-Run:  ~/miniforge3/envs/geo_env/bin/python mun_survey_improvement.py
+Run:  ~/miniforge3/envs/geo_env/bin/python 5_mun_survey_improvement.py
 """
 import os, numpy as np, pandas as pd, warnings
 warnings.filterwarnings("ignore")
@@ -53,7 +53,7 @@ sm = sm[~sm['muncode'].str.endswith('000')].groupby('muncode').agg(
 sm['yield_siap'] = sm['q'] / sm['ha']
 
 AGG = [  # (label, file, col, shrink_lambda) — NDVI row is the cropland-masked
-         # aefn2 baseline (partial_masked_mun_train_adc_eval.py); it replaced the
+         # aefn2 baseline (2_masked_adc_eval.py); it replaced the
          # two unmasked h3 harmonic variants on 2026-08-15. shrink_lambda is the
          # deployed lambda = 0.74 for every model (public irrigation-projection
          # point estimate, Sec 3.6; switched from per-model census-CV lambdas
@@ -92,7 +92,7 @@ for label, f, col, lam in AGG:
         panelB.append((sub_lab, len(b), r2(b['yield_siap'], b['pred']), rmse(b['yield_siap'], b['pred'])))
 
 # NDVI GB (mun): trained directly at municipality level, random muni-year K-fold CV (no aggregation weight)
-# Source switched 2026-08-15 from the unmasked h3 model to the masked aefn2 model (masked_muni_cv.py).
+# Source switched 2026-08-15 from the unmasked h3 model to the masked aefn2 model (1_masked_muni_cv.py).
 hr = pd.read_parquet(os.path.join(P, "mun_aefn2_masked_gb_kfold_preds.parquet"))
 hr = hr[hr['year'] == 2022].copy()
 hr['muncode'] = hr['muncode'].astype(str).str.zfill(5)

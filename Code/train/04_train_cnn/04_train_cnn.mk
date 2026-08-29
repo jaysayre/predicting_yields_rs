@@ -17,7 +17,7 @@ YEARS := $(shell seq 2003 2022)
 train_cnn: $(PREDS_DIR)/adcs_yield_preds.csv
 
 # Step 1: Preprocess histograms → pickles
-$(PREDS_DIR)/.histograms_cleaned: $(HIST_DIR)/clean_histograms_redux.py
+$(PREDS_DIR)/.histograms_cleaned: $(HIST_DIR)/dep/clean_histograms_redux.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 	touch $@
 

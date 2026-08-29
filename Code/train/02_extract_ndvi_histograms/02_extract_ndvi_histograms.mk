@@ -14,12 +14,12 @@ TASK_DIR := $(CODE_DIR)/train/02_extract_ndvi_histograms
 
 # ── Original 2-period histograms (32x32x3) ───────────────
 extract_histograms:
-	@echo "MANUAL STEP: Run ls_ndvi_hists.py interactively"
+	@echo "MANUAL STEP: Run dep/ls_ndvi_hists.py interactively"
 	@echo "  Requires: Earth Engine auth + ML_env"
 	@echo "  Args:     0.2 1.0 0.0 12.0 0.0 0.6 32 max"
 	@echo "  Output:   GDrive → muni_vi_hists_0.2_1.0_0.0_12.0_0.0_0.6_32_max/"
 	@echo ""
-	@echo "Then run clean_histograms_redux.py to preprocess → pickles"
+	@echo "Then run dep/clean_histograms_redux.py to preprocess → pickles"
 
 # ── New monthly histograms (32 bins × 8 months × 6 indices) ──
 extract_monthly_histograms:
@@ -82,4 +82,4 @@ extract_cropland_features:
 	@echo "  2. Run ls_cropland_features.py (ML env, EE auth) — submits GEE batch exports"
 	@echo "  3. TAG=crop_aefn2 $(TASK_DIR)/pull_cropland_csvs.sh            # pull by file-ID from Drive"
 	@echo "  4. Consolidate → Data/cropland_features/ (see AEFN2_PULL_HANDOFF.md)"
-	@echo "Downstream: analysis/02_accuracy_maize/masked_muni_cv.py + partial_masked_mun_train_adc_eval.py"
+	@echo "Downstream: analysis/02_accuracy_maize/1_masked_muni_cv.py + 2_masked_adc_eval.py"

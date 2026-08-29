@@ -89,7 +89,7 @@ train_01:
 
 train_02:
 	@echo "MANUAL: Run Code/train/02_extract_ndvi_histograms/ (requires Earth Engine auth)"
-	@echo "  Original:  ls_ndvi_hists.py 0.2 1.0 0.0 12.0 0.0 0.6 32 max"
+	@echo "  Original:  dep/ls_ndvi_hists.py 0.2 1.0 0.0 12.0 0.0 0.6 32 max"
 	@echo "  Monthly:   ls_monthly_hists.py 32 8"
 
 train_03:

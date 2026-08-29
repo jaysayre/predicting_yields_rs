@@ -33,7 +33,7 @@ h3 2D-histograms) are replaced by a SINGLE "NDVI" row built from the
 cropland-masked aefn2 features, now that that panel is complete (4,784/4,784
 batches). Its holdout model comes from train_holdout_validation_models.py
 train_ndvi_masked(), which reads the muni feature cache built by
-analysis/02_accuracy_maize/masked_muni_cv.py.
+analysis/02_accuracy_maize/1_masked_muni_cv.py.
 
 AEF models' ADC-level predictions are aggregated to the municipality level
 using SIAP agricultural-land area weights; NDVI predicts at the

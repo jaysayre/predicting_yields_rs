@@ -22,7 +22,7 @@ Inputs (under ~/Dropbox/Projects/Maize_prediction/):
 Output:
   plots/coauthor_extras_paper/fig_representativeness_targeting.pdf (pgf/Times)
 
-Run:  ~/miniforge3/envs/geo_env/bin/python fig_representativeness_targeting.py
+Run:  ~/miniforge3/envs/geo_env/bin/python 12_fig_representativeness_targeting.py
 """
 import os
 import numpy as np

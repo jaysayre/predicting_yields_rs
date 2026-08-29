@@ -11,11 +11,11 @@ INEGI 2022 census municipality yields as the training target.
 
 Saves the ensemble-average ADC-level 2022 predictions to
 Data/predictions/adc_aggnn_census_trained_preds.parquet, which
-analysis/02_accuracy_maize/census_thought_all_models.py consumes to build
+analysis/02_accuracy_maize/6_census_thought_all_models.py consumes to build
 the Agg-NN (Census-trained) panel of Table \ref{tab:census_thought}
 (including its shrink rows). This script no longer writes
 census_thought_experiment_2022.tex itself — that name is owned by
-census_thought_all_models.py.
+6_census_thought_all_models.py.
 
 Usage:
   conda activate ML_env

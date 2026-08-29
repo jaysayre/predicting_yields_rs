@@ -13,7 +13,7 @@ Outputs a LaTeX table for Overleaf.
 
 Usage:
   source /usr/local/anaconda3/etc/profile.d/conda.sh && conda activate mpc_env
-  python3 accuracy_profile_by_adc_chars.py
+  python3 7_accuracy_profile_by_adc_chars.py
 """
 import os, sys, time, warnings
 import numpy as np
@@ -391,12 +391,11 @@ lines.append(r"\end{table}")
 
 tex = "\n".join(lines)
 
-# Save to tables dir and Overleaf
-for out_path in [os.path.join(table_dir, "accuracy_profile_by_adc_chars.tex"),
-                 os.path.join(overleaf, "accuracy_profile_by_adc_chars.tex")]:
-    with open(out_path, 'w') as f:
-        f.write(tex + "\n")
-    print(f"  Written: {out_path}")
+# Save to tables dir only; 04_copy_to_overleaf is the single road to Overleaf
+out_path = os.path.join(table_dir, "accuracy_profile_by_adc_chars.tex")
+with open(out_path, 'w') as f:
+    f.write(tex + "\n")
+print(f"  Written: {out_path}")
 
 print(f"\n{tex}")
 print(f"\nRuntime: {(time.time()-t0)/60:.1f} min")

@@ -679,8 +679,15 @@ def main():
     if os.path.exists(orig_mlp_path) and not os.path.exists(backup_mlp_path):
         shutil.copy2(orig_mlp_path, backup_mlp_path)
         print(f"  Backed up original: {backup_mlp_path}")
-    elif os.path.exists(backup_mlp_path):
+    elif os.path.exists(orig_mlp_path):
+        # never clobber without a fresh backup: keep the coauthor original AND a
+        # timestamped copy of whatever is being replaced (2026-08-28)
+        import datetime as _dt
+        stamped = orig_mlp_path.replace(
+            ".csv", f"_pre_{_dt.datetime.now():%Y%m%d_%H%M%S}.csv")
+        shutil.copy2(orig_mlp_path, stamped)
         print(f"  Backup already exists: {backup_mlp_path}")
+        print(f"  Timestamped copy of current file: {stamped}")
 
     # Save as CSV in Joel's MLP format: adcid, year, pred_quantity, pred_area, pred_yield
     # pred_quantity and pred_area aren't meaningful for our model, but notebook

@@ -20,7 +20,7 @@ Models: NDVI (Landsat-derived); AEF mean, Agg-NN, AEF Hist, AEF Hist Ens.
 final panel (re-added 2026-08-28 after a brief removal, so the prose that
 discusses its numbers points at the table).
 
-Run:  ~/miniforge3/envs/geo_env/bin/python census_thought_all_models.py
+Run:  ~/miniforge3/envs/geo_env/bin/python 6_census_thought_all_models.py
 """
 import os, warnings
 import numpy as np

@@ -20,7 +20,7 @@ $(PREDS_DIR)/adc_alpha_earth_preds_maize.parquet: $(TASK_DIR)/rf_yield_predictio
 # ── AEF Hist Ensemble (paper's primary model) ────────────
 # Writes adc_aef_hist_ens_preds.parquet + adc_aef_hist_ens_eval.parquet; the
 # eval file carries yields + season-matched corrections and is the backbone of
-# accuracy_main_2022.py (Tables 2/A1/A2).
+# 4_accuracy_main_2022.py (Tables 2/A1/A2).
 $(PREDS_DIR)/adc_aef_hist_ens_eval.parquet: $(TASK_DIR)/gb_aef_hist_ensemble.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 
@@ -32,7 +32,7 @@ train_aef_hist_ens_qbin: $(TASK_DIR)/gb_aef_hist_ensemble_qbin.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 
 # Muni-level random muni-year 5-fold CV for AEF Hist (feeds the survey-
-# improvement table in analysis/02_accuracy_maize/mun_survey_improvement.py)
+# improvement table in analysis/02_accuracy_maize/5_mun_survey_improvement.py)
 $(PREDS_DIR)/mun_aef_hist_gb_kfold_preds.parquet: $(TASK_DIR)/mun_cv_aef_hist.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 

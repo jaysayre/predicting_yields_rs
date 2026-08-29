@@ -1,5 +1,5 @@
 """
-masked_muni_cv.py — municipality-level CV R2 for the cropland-masked NDVI
+1_masked_muni_cv.py — municipality-level CV R2 for the cropland-masked NDVI
 (aefn2) feature set, the paper's NDVI baseline.
 
 Replaces the 0.686 placeholder that was computed off partial back-years. Uses
@@ -11,7 +11,7 @@ muni-cv-random-kfold decision (2026-08-07); do not reintroduce LOYO.
 
 A muni-level cropland extraction was never run, so muni features are the ADC
 features aggregated to muni-year, area-weighted by the SIAP ag-land proxy --
-the same approximation partial_masked_mun_train_adc_eval.py makes (mean and
+the same approximation 2_masked_adc_eval.py makes (mean and
 quantile-bin fractions aggregate ~exactly under area weighting; sd/percentiles
 approximately).
 
@@ -21,7 +21,7 @@ Outputs
                                                           train_holdout_validation_models.py)
   Data/predictions/mun_aefn2_masked_gb_kfold_preds.parquet  out-of-sample preds
 
-Run: ~/miniforge3/envs/geo_env/bin/python masked_muni_cv.py
+Run: ~/miniforge3/envs/geo_env/bin/python 1_masked_muni_cv.py
      [--rebuild]   force re-aggregation of the muni feature cache
 """
 import os, sys, glob, time, warnings
