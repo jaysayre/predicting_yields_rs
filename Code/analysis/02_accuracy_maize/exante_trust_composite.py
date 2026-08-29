@@ -50,9 +50,25 @@ D.to_csv(os.path.join(out, "exante_trust_index.csv"), index=False)
 print(f"Composite features (signed, equal weight): {SIGNS}")
 
 # ── VALIDATION ONLY: does the unsupervised index order realized skill? ──
+# Realized skill is that of the DEPLOYED specification: AEF Hist Ens. Shrink
+# (lambda = 0.74, Sec 3.6), matching Figure exante_targeting (2026-08-28).
 ev = pd.read_parquet(os.path.join(P, "adc_aef_hist_ens_eval.parquet"))
 ev = ev[["adc", "muncode", "yield", "pred"]].dropna(subset=["yield", "pred"]).copy()
 ev["muncode"] = ev["muncode"].astype(str).str.zfill(5)
+LAM = 0.74
+_g = ev.groupby("muncode")["pred"]
+ev["pred"] = _g.transform("mean") + LAM * (ev["pred"] - _g.transform("mean"))
+
+# per-mun within-R2 of the deployed (shrunk) predictions, >=5 maize ADCs;
+# refreshes the CSV's raw-based within_r2_mun column
+_w = []
+for m, g in ev.groupby("muncode"):
+    if len(g) < 5: continue
+    a = g["yield"] - g["yield"].mean(); b = g["pred"] - g["pred"].mean()
+    if (a**2).sum() > 0: _w.append((m, 1 - ((a - b)**2).sum() / (a**2).sum()))
+_w = pd.DataFrame(_w, columns=["muncode", "within_r2_mun"])
+D = D.drop(columns=["within_r2_mun"]).merge(_w, on="muncode", how="left")
+D.to_csv(os.path.join(out, "exante_trust_index.csv"), index=False)
 
 # realized per-mun rank skill (Spearman rho), >=5 maize ADCs
 rho = []
@@ -75,6 +91,12 @@ print(f"  Pearson  (within-R2)     : {pear:+.3f}")
 print(f"  Spearman (within-R2)     : {spear:+.3f}")
 print(f"  corr. with rank skill rho: {rho_corr:+.3f}  (n={len(sr):,})")
 print(f"  sign-AUC (within-R2 > 0) : {auc:.3f}")
+
+# bivariate driver correlations (Spearman) vs realized within-mun skill
+print("\n── Bivariate drivers (Spearman rho vs realized within-mun R2) ──")
+for feat in ["log_n_adc", "aef_spread", "irrig_share_sd", "aef_eff_dim"]:
+    dd = D[[feat, "within_r2_mun"]].dropna()
+    print(f"  {feat:16s} rho = {spearmanr(dd[feat], dd['within_r2_mun']).correlation:+.3f}")
 
 # ── cross-model: same single index vs EACH model's realized within-skill ──
 # 2026-08-26: single cropland-masked NDVI baseline (aefn2) replaces the two
