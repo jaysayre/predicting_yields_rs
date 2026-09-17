@@ -125,8 +125,8 @@ ANCHORS = {"combined":      _anchor(s22),
            "spring_summer": _anchor(s22[s22["growing_season"]=="Spring-Summer"]),
            "fall_winter":   _anchor(s22[s22["growing_season"]=="Fall-Winter"])}
 ANCHOR_NOTE = {"combined":      "all growing seasons",
-               "spring_summer": "the Spring-Summer season only",
-               "fall_winter":   "the Fall-Winter season only"}
+               "spring_summer": "the spring-summer season only",
+               "fall_winter":   "the fall-winter season only"}
 for _t, _a in ANCHORS.items():
     print(f"  anchor {_t:14s}: {len(_a):,} municipalities")
 
@@ -269,10 +269,10 @@ set_anchor("combined")
 for nm,_,_ in LANDSAT+AEFM:
     for t,m,_ in model_rows(nm,"yield"): print(f"  {t:24s} N={m[0]:>6,} R2={m[1]:.3f} Btw={m[2]:.3f} Wtn={m[3]:.3f} RMSE={m[4]:.3f}")
 build_table("yield", "Combined season", "accuracy_combined_2022.tex", "combined", show_ci=False)
-build_table("yield_pv", "Spring-summer (P-V) season", "accuracy_spring_summer_2022.tex", "spring_summer", show_ci=False)
-build_table("yield_oi", "Fall-winter (O-I) season", "accuracy_fall_winter_2022.tex", "fall_winter", show_ci=False)
+build_table("yield_pv", "spring-summer (P-V) season", "accuracy_spring_summer_2022.tex", "spring_summer", show_ci=False)
+build_table("yield_oi", "fall-winter (O-I) season", "accuracy_fall_winter_2022.tex", "fall_winter", show_ci=False)
 build_common_sample_table("yield", "Combined season", "common_sample_combined_2022.tex", "combined")
-build_common_sample_table("yield_pv", "Spring-summer (P-V) season", "common_sample_spring_summer_2022.tex", "spring_summer")
+build_common_sample_table("yield_pv", "spring-summer (P-V) season", "common_sample_spring_summer_2022.tex", "spring_summer")
 
 # ── Scatter figures (replaces the notebook's old RS-based panels) ──
 import subprocess
@@ -377,9 +377,9 @@ fig.tight_layout()
 save_pdf_png(fig, "accuracy_scatter_combined_2022")
 print("Wrote accuracy_scatter_combined_2022.{pdf,png}")
 
-scols = cols[:-1]                                        # seasonal: no DGSIAP panel
+scols = [(c, nm) for c, nm in panels if c != "siap"]      # seasonal: the deployed Shrink panels, no DGSIAP panel
 fig, axes = plt.subplots(2, len(scols), figsize=(3.3 * len(scols), 7.0))
-for row, ycol, lab in [(0, "yield_oi", "Fall-Winter"), (1, "yield_pv", "Spring-Summer")]:
+for row, ycol, lab in [(0, "yield_oi", "fall-winter"), (1, "yield_pv", "spring-summer")]:
     for ax, (c, nm) in zip(axes[row], scols):
         scatter_panel(ax, ev[ycol].values, ev[c].values, nm)
     axes[row][0].set_ylabel(f"Predicted Yield (t/ha)\n[{lab}]", fontsize=base_font_size - 1)

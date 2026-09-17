@@ -103,6 +103,8 @@ dev_cmap  =  mpl.colormaps["RdBu_r"]
 # -- Data -----------------------------------------------------
 ev  =  pd.read_parquet(eval_path)[["adc", "muncode", "yield", "pred", "pred_corr"]]
 ev  =  ev.dropna(subset=["yield", "pred"])
+_gm =  ev.groupby("muncode")["pred"].transform("mean")
+ev["pred_shrink"] =  _gm + LAM * (ev["pred"] - _gm)        # deployed AEF Hist Ens. Shrink, all evaluation ADCs
 pen =  ev[ev["muncode"] == MUN].copy()
 gm  =  pen["pred"].mean()
 pen["pred_shrink"] =  gm + LAM * (pen["pred"] - gm)
@@ -359,15 +361,15 @@ for i, (k, ttl, body, c0, c1, l0, l1, cm_, nm_, cbn, cbc, cbl) in enumerate(sub)
 # ------------------------------------------------------------
 section(L[0], R3[0], R[1], R3[1], r"5 $\cdot$ Accuracy metrics")
 smp = ev.sample(min(len(ev), 40000), random_state=0)
-gmn = smp.groupby("muncode")[["yield", "pred"]].transform("mean")
-dy, dp = smp["yield"] - gmn["yield"], smp["pred"] - gmn["pred"]
-r2_all = 1 - np.sum((smp["yield"] - smp["pred"]) ** 2) / np.sum((smp["yield"] - smp["yield"].mean()) ** 2)
+gmn = smp.groupby("muncode")[["yield", "pred_shrink"]].transform("mean")
+dy, dp = smp["yield"] - gmn["yield"], smp["pred_shrink"] - gmn["pred_shrink"]
+r2_all = 1 - np.sum((smp["yield"] - smp["pred_shrink"]) ** 2) / np.sum((smp["yield"] - smp["yield"].mean()) ** 2)
 r2_w   = 1 - np.sum((dy - dp) ** 2) / np.sum(dy ** 2)
 metrics = [
     ("a", r"\textbf{Overall $R^2$}",
      r"$R^2 = 1 - \dfrac{\sum_i (Y_i - \hat Y_i)^2}{\sum_i (Y_i - \bar Y)^2}$" "\n\n"
-     "Fit against the ADC yields themselves;\na model that assigns every ADC its\nmunicipal average already scores\nwell here.",
-     smp["yield"], smp["pred"], "census yield (t/ha)", "predicted (t/ha)", (0, 12), f"$R^2$ = {r2_all:.2f}"),
+     "AEF Hist Ens.\\ Shrink, combined season.\nFit against the ADC yields themselves;\na model that assigns every ADC its\nmunicipal average already scores\nwell here.",
+     smp["yield"], smp["pred_shrink"], "census yield (t/ha)", "predicted (t/ha)", (0, 12), f"$R^2$ = {r2_all:.2f}"),
     ("b", r"\textbf{Within-municipality $R^2$}",
      r"$1 - \dfrac{\sum_m \sum_{i \in m} [(\hat Y_i - \bar{\hat Y}_m) - (Y_i - \bar Y_m)]^2}{\sum_m \sum_{i \in m} (Y_i - \bar Y_m)^2}$" "\n\n"
      "Every term is demeaned within its\nmunicipality: the share of sub-municipal\nvariation the model explains beyond\nwhat municipal statistics give.",

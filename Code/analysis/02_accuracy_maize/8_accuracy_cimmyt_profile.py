@@ -768,7 +768,7 @@ for _lbl, _lo, _hi in _BANDS:
 _tex += r"""\bottomrule
 \end{tabular}
 \par\smallskip
-\footnotesize{Notes: models trained on DGSIAP municipal Spring--Summer maize yields ("""
+\footnotesize{Notes: models trained on DGSIAP municipal spring-summer maize yields ("""
 _tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to plot-level AEF features. CIMMYT yields "
          r"are self-reported; observations outside "
          f"{CLEAN_LO}--{CLEAN_HI}"

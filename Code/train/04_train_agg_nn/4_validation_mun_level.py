@@ -2,7 +2,7 @@
 Generate validation_mun_level_2022.tex  (Table \ref{tab:validation_mun}).
 
 Municipality-level held-out validation: every model is evaluated on the SAME
-held-out municipality-years (DGSIAP Spring-Summer maize, 2017-2024), and every
+held-out municipality-years (DGSIAP spring-summer maize, 2017-2024), and every
 model is trained with those municipalities excluded.
 
 The 80/20 municipality split is reproduced EXACTLY from 1_agg_constrained_nn.py
@@ -176,7 +176,7 @@ for grp, label, f, col in MODELS:
 
 # ── Write LaTeX table ───────────────────────────────────
 tex = ("\\begin{table}[!htbp]\n\\centering\n"
-       "\\caption{Municipality-level validation performance (DGSIAP Spring-Summer maize, "
+       "\\caption{Municipality-level validation performance (DGSIAP spring-summer maize, "
        "2017--2024). Every model is trained with the same randomly held-out 20\\% of "
        "municipalities excluded from training and evaluated on the same held-out "
        "municipality-years (the intersection of municipality-years for which all models "
