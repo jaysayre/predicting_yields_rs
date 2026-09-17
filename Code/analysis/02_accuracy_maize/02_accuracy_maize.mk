@@ -22,6 +22,8 @@
 #   18_w_public_selection         ensemble weight w from public data
 #   19_robustness_lambda_ci_qbin  bootstrap CIs, lambda curve, quantile-bin robustness
 #   20_sample_accounting_and_lambda  sample-size accounting + dispersion gauge
+#   21_fig_graphical_abstract     graphical abstract for the submission system
+#                                 (not a paper object; `make graphical_abstract`)
 # Steps 17-20 print the numbers cited in the prose (no .tex output); the
 # lambda = 0.72 and w = 0.5 they select are entered as constants in steps 4-16
 # (LAM / W in each script). Run them with `make robustness_stats` etc.
@@ -154,3 +156,14 @@ robustness_stats: $(TASK_DIR)/19_robustness_lambda_ci_qbin.py
 # 20 — sample-size accounting + dispersion gauge
 sample_accounting: $(TASK_DIR)/20_sample_accounting_and_lambda.py $(PREDS_DIR)/mun_aef_hist_bins_gb_kfold_preds.parquet
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
+# ── Step 21: graphical abstract (journal submission system, not a paper figure)
+# Deliberately outside the `accuracy_maize` aggregate and the Overleaf copy:
+# it is a submission-form object, not a paper object. 10.24 x 3.94 in canvas,
+# no text below 14 pt, PNG at 300 dpi (3072 x 1182 px).
+.PHONY: graphical_abstract
+graphical_abstract: $(PLOTS_DIR)/graphical_abstract.pdf
+
+$(PLOTS_DIR)/graphical_abstract.pdf: $(TASK_DIR)/21_fig_graphical_abstract.py \
+		$(PREDS_DIR)/adc_aef_hist_ens_eval.parquet $(PREDS_DIR)/adc_aefn2_masked_preds.parquet
+	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
