@@ -317,7 +317,8 @@ def save_pdf_png(fig, stem):
     fig.savefig(pdf, bbox_inches="tight", dpi=300)
     subprocess.run(["pdftoppm", "-png", "-r", "200", "-singlefile", pdf, os.path.join(plot_dir, stem)], check=True)
 
-def scatter_panel(ax, y, yh, title, wr2=None):
+def scatter_panel(ax, y, yh, title, wr2=None, fs=None):
+    fs = fs or base_font_size                  # larger for the 2 x 5 seasonal grid, which prints at 0.4 scale
     m = np.isfinite(y) & np.isfinite(yh)
     ax.hexbin(y[m], yh[m], gridsize=45, bins="log", cmap="viridis",
               extent=(0, 12, 0, 12), linewidths=0, rasterized=True)  # raster: pgf cannot hold the hex paths
@@ -329,9 +330,9 @@ def scatter_panel(ax, y, yh, title, wr2=None):
     if wr2 is not None:
         if np.isfinite(wr2) and abs(wr2) < 5e-4: wr2 = 0.0   # no "$-$0.000" for the DGSIAP panel
         stat += f",  within-$R^2$ = {fmt(wr2)}"
-    ax.set_title(f"{title}\n{stat}", fontsize=base_font_size)
-    ax.set_xlabel("Reported Yield (t/ha)", fontsize=base_font_size - 1)
-    ax.tick_params(labelsize=base_font_size - 2, length=0)
+    ax.set_title(f"{title}\n{stat}", fontsize=fs)
+    ax.set_xlabel("Reported Yield (t/ha)", fontsize=fs - 1)
+    ax.tick_params(labelsize=fs - 2, length=0)
 
 SCATTER = ["NDVI", "AEF mean", "Agg-NN"]        # raw + corrected pairs
 for m in SCATTER:                                        # corrected columns
@@ -372,18 +373,17 @@ for ax in axes[0]:
     ax.set_xlabel("")
 for ax in axes[:, 0]:
     ax.set_ylabel("Predicted Yield (t/ha)", fontsize=base_font_size - 1)
-fig.suptitle("Predicted vs. Reported Maize Yield (Combined Season, 2022)", y=1.01)
 fig.tight_layout()
 save_pdf_png(fig, "accuracy_scatter_combined_2022")
 print("Wrote accuracy_scatter_combined_2022.{pdf,png}")
 
 scols = [(c, nm) for c, nm in panels if c != "siap"]      # seasonal: the deployed Shrink panels, no DGSIAP panel
-fig, axes = plt.subplots(2, len(scols), figsize=(3.3 * len(scols), 7.0))
+FS_SEASONAL = base_font_size + 6                       # the grid is 16.5 in wide and prints at text width
+fig, axes = plt.subplots(2, len(scols), figsize=(3.3 * len(scols), 7.4))
 for row, ycol, lab in [(0, "yield_oi", "fall-winter"), (1, "yield_pv", "spring-summer")]:
     for ax, (c, nm) in zip(axes[row], scols):
-        scatter_panel(ax, ev[ycol].values, ev[c].values, nm)
-    axes[row][0].set_ylabel(f"Predicted Yield (t/ha)\n[{lab}]", fontsize=base_font_size - 1)
-fig.suptitle("Predicted vs. Reported Maize Yield by Season (2022)", y=1.01)
+        scatter_panel(ax, ev[ycol].values, ev[c].values, nm, fs=FS_SEASONAL)
+    axes[row][0].set_ylabel(f"Predicted Yield (t/ha)\n[{lab}]", fontsize=FS_SEASONAL - 1)
 fig.tight_layout()
 save_pdf_png(fig, "accuracy_scatter_seasonal_2022")
 print("Wrote accuracy_scatter_seasonal_2022.{pdf,png}")
