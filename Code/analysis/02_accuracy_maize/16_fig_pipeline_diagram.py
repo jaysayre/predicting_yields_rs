@@ -204,7 +204,7 @@ for tt in [0.45, 0.62, 0.79]:
 ax.set_ylim(0.1, 0.8); clean(ax)
 ftext(L[0] + 0.014, y - 0.152, "NDVI, harmonic fit", fontsize=fss, color=MUTED)
 ftext(L[0] + 0.104, y - 0.018,
-      "AlphaEarth Foundations (AEF)\nannual embeddings: 64 bands,\n10 m, 2017--2024\n"
+      "AlphaEarth Foundations (AEF)\nannual embeddings: 64 bands,\n10 m, 2017--2024\n\n"
       "Landsat 7/8 NDVI: per-pixel\n3rd-order harmonic fit, read\n1, 3 and 5 months after\nlocal planting")
 
 y2 = y - 0.170
