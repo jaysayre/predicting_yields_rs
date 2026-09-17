@@ -10,14 +10,13 @@ file in plots/.
 
 Logic is lifted from the commented block in cell 11 of that notebook, summed over
 crop cycles rather than split by cycle (the published title carries no cycle
-qualifier) and restricted to 2018-2022 to match it -- the underlying data now
-extends to 2024.
+qualifier) over 2018-2024, the window the paper text cites.
 
 Input:  Data/SIAP_monthly/Output/mnthly_siap.dta   (cleaned monthly SIAP)
 Output: plots/maize_monthly_harvesting.pdf (pgf/Times, the paper's font) + .png (pdftoppm)
 
 Run: ~/miniforge3/envs/geo_env/bin/python 2_plot_maize_monthly_harvesting.py
-     [--years 2018-2022] [--out <path>]
+     [--years 2018-2024] [--out <path>]
 """
 import os, sys, warnings, subprocess
 import pandas as pd
@@ -73,7 +72,7 @@ CROP   =  "Maíz grano"
 MONTHS =  ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
 argv =  sys.argv
-y0, y1 =  2018, 2022
+y0, y1 =  2018, 2024
 if "--years" in argv:
     y0, y1 =  (int(x) for x in argv[argv.index("--years") + 1].split("-"))
 if "--out" in argv:

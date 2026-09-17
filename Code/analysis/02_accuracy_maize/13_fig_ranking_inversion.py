@@ -81,8 +81,8 @@ for m in models:
                 ha="left", va="center", fontsize=9.5, color=col)
 
 ax.set_xlim(-0.78, 1.78)
-ax.set_ylim(6.6, 0.4)               # rank 1 at top
-ax.set_yticks(range(1, 7)); ax.set_yticklabels([f"{r}" for r in range(1, 7)])
+ax.set_ylim(len(models) + 0.6, 0.4)  # rank 1 at top
+ax.set_yticks(range(1, len(models) + 1)); ax.set_yticklabels([f"{r}" for r in range(1, len(models) + 1)])
 ax.set_ylabel("rank (1 = best)")
 ax.set_xticks([x0, x1])
 ax.set_xticklabels(["Municipality level\n($R^2$ vs DGSIAP)",
