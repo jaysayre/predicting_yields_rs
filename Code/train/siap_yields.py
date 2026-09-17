@@ -7,7 +7,7 @@ the AEF models are scored on: on the overlapping years the two agreed exactly
 only 52% of the time (corr 0.972, mean 2.55 vs 2.44). Models trained on it were
 therefore not comparable to the published AEF numbers.
 
-The canonical series is the one `gb_aef_hist_ensemble.py` builds inline:
+The canonical series is the one `2_gb_aef_hist_ensemble.py` builds inline:
 SIAP by-season, filtered to a crop and growing season, yield = q / ha_planted.
 Covers 1980-2024 (so the NDVI panel's full 2017-2024 window is usable).
 

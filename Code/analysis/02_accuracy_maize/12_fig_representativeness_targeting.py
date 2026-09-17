@@ -17,7 +17,7 @@ This figure shows realized within-municipality skill rising monotonically across
       ex-ante driver of agro-ecological heterogeneity).
 
 Inputs (under ~/Dropbox/Projects/Maize_prediction/):
-  Data/predictions/adc_aef_hist_ens_eval.parquet           -- ADC yield + pred (shrink applied here, lambda=0.74)
+  Data/predictions/adc_aef_hist_ens_eval.parquet           -- ADC yield + pred (shrink applied here, lambda=0.72)
   plots/coauthor_extras_paper/exante_trust_index.csv       -- per-mun ex-ante features
 Output:
   plots/coauthor_extras_paper/fig_representativeness_targeting.pdf (pgf/Times)
@@ -72,10 +72,10 @@ trust =  pd.read_csv(os.path.join(plot_dir, "exante_trust_index.csv"),
                      dtype={'muncode': str})
 
 ev = ev.dropna(subset=['yield', 'pred']).copy()
-# deployed AEF Hist Ens. SHRINK predictions (lambda = 0.74, Sec 3.6) -- the
+# deployed AEF Hist Ens. SHRINK predictions (lambda = 0.72, Sec 3.6) -- the
 # paper's headline specification; Spearman panels are shrink-invariant but the
 # pooled within-R2 is not.
-lam = 0.74
+lam = 0.72
 _g  = ev.groupby('muncode')['pred']
 ev['pred'] = _g.transform('mean') + lam * (ev['pred'] - _g.transform('mean'))
 
@@ -127,8 +127,8 @@ fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
 GREY = "#4A4A4A"; RED = "#B22222"
 
 for ax, gdf, xlab, title in [
-    (axes[0], g_trust,  "ex-ante trust-index quintile (low $\\to$ high)",
-     "(a) Realized within-mun skill rises with the\nex-ante trust index (no ground truth used)"),
+    (axes[0], g_trust,  "ex-ante skill-index quintile (low $\\to$ high)",
+     "(a) Realized within-mun skill rises with the\nex-ante downscaling skill index (no ground truth used)"),
     (axes[1], g_spread, "AEF within-mun spread quintile (low $\\to$ high)",
      "(b) ...and with AEF within-mun spread\n(agro-ecological heterogeneity proxy)"),
 ]:

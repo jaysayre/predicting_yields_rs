@@ -18,7 +18,7 @@ approximately).
 Outputs
   Data/cropland_features/muni_aefn2_masked.parquet        cached muni features
                                                           (reused by
-                                                          train_holdout_validation_models.py)
+                                                          3_train_holdout_validation_models.py)
   Data/predictions/mun_aefn2_masked_gb_kfold_preds.parquet  out-of-sample preds
 
 Run: ~/miniforge3/envs/geo_env/bin/python 1_masked_muni_cv.py

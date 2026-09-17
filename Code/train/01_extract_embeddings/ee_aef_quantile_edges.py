@@ -6,7 +6,7 @@ cropland (ESA WorldCover class 40). Samples pixels state by state from the
 2022 AEF mosaic, pools them, and stores the 7 interior edges per dim that
 define 8 equal-mass bins.
 
-Motivation: the fixed-width bins in ee_alpha_earth_binned_hist.py span
+Motivation: the fixed-width bins in 6_ee_alpha_earth_binned_hist.py span
 [-0.8, 0.8] but 99.4% of cropland pixel mass falls in [-0.4, 0.4] (median
 effective bins per dim ~2). Quantile edges restore true 8-level resolution.
 

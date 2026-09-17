@@ -15,7 +15,7 @@ chain no longer depends on running exploratory notebooks. Reproduces the same
 
 Also writes within_r2_mun (raw ensemble, >=2-ADC muns) for continuity; note
 10_exante_trust_composite.py REPLACES that column with the deployed-Shrink
-(lambda=0.74, >=5-ADC) version before validating the index.
+(lambda=0.72, >=5-ADC) version before validating the index.
 
 Inputs  (~/Dropbox/Projects/Maize_prediction/):
   Data/predictions/adc_aef_hist_ens_eval.parquet   -- ADC yield + ensemble pred

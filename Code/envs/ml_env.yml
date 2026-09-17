@@ -1,0 +1,16 @@
+name: ml_cuda
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - ipykernel
+  - tqdm
+  - pillow
+  - opencv
+  - h5py

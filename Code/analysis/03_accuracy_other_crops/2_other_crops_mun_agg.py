@@ -6,10 +6,10 @@ Replaces the legacy notebook table (2026-02) that aggregated ADC predictions
 with census planted-area weights -- census information must not enter the
 aggregation (2026-08-28). Reports the deployed AEF Hist Ens. Shrink model
 (2026-08-28, was AEF mean): per-crop ensemble ADC predictions saved by
-gb_aef_hist_ensemble_other_crops.py (adc_aef_hist_ens_preds_{crop}), shrink
+4_gb_aef_hist_ensemble_other_crops.py (adc_aef_hist_ens_preds_{crop}), shrink
 column, each ADC weighted by its 2007 agricultural-land area. Panel A scores aggregated predictions and the
-SIAP municipal average against the census municipal yield; Panel B scores
-aggregated predictions and the aggregated census against SIAP.
+DGSIAP municipal average against the census municipal yield; Panel B scores
+aggregated predictions and the aggregated census against DGSIAP.
 
 Run:  ~/miniforge3/envs/geo_env/bin/python other_crops_mun_agg.py
 """
@@ -71,14 +71,14 @@ for crop, tag in CROPS:
     a =  cm.dropna(subset=["cen_yield", "pred_agg"])
     rowsA.append(f"{disp} & AEF Hist Ens.\\ Shrink (agg.) & {len(a):,} & {fmt(r2(a['cen_yield'], a['pred_agg']))} & {fmt(rmse(a['cen_yield'], a['pred_agg']))} \\\\")
     s =  cm.dropna(subset=["cen_yield", "siap_yield"])
-    rowsA.append(f"{disp} & SIAP Mun.\\ Avg. & {len(s):,} & {fmt(r2(s['cen_yield'], s['siap_yield']))} & {fmt(rmse(s['cen_yield'], s['siap_yield']))} \\\\")
+    rowsA.append(f"{disp} & DGSIAP Mun.\\ Avg. & {len(s):,} & {fmt(r2(s['cen_yield'], s['siap_yield']))} & {fmt(rmse(s['cen_yield'], s['siap_yield']))} \\\\")
     rowsA.append(r"\hline")
     b =  cm.dropna(subset=["siap_yield", "pred_agg"])
     rowsB.append(f"{disp} & AEF Hist Ens.\\ Shrink (agg.) & {len(b):,} & {fmt(r2(b['siap_yield'], b['pred_agg']))} & {fmt(rmse(b['siap_yield'], b['pred_agg']))} \\\\")
     c =  cm.dropna(subset=["siap_yield", "cen_yield"])
     rowsB.append(f"{disp} & INEGI Census (agg.) & {len(c):,} & {fmt(r2(c['siap_yield'], c['cen_yield']))} & {fmt(rmse(c['siap_yield'], c['cen_yield']))} \\\\")
     rowsB.append(r"\hline")
-    print(f"{crop:10s} vsCensus AEF={r2(a['cen_yield'], a['pred_agg']):.3f} SIAP={r2(s['cen_yield'], s['siap_yield']):.3f} | vsSIAP AEF={r2(b['siap_yield'], b['pred_agg']):.3f} Census={r2(c['siap_yield'], c['cen_yield']):.3f}")
+    print(f"{crop:10s} vsCensus AEF={r2(a['cen_yield'], a['pred_agg']):.3f} DGSIAP={r2(s['cen_yield'], s['siap_yield']):.3f} | vsSIAP AEF={r2(b['siap_yield'], b['pred_agg']):.3f} Census={r2(c['siap_yield'], c['cen_yield']):.3f}")
 
 L =  [r"\begin{table}[!htbp]", r"\centering",
       r"\caption{Municipality-level yield prediction results for non-maize crops, 2022. "
@@ -89,12 +89,12 @@ L =  [r"\begin{table}[!htbp]", r"\centering",
       r"\label{tab:mun_other_crops}", r"\begin{tabular}{llrrr}", r"\hline",
       r"\multicolumn{5}{l}{\textit{Panel A: vs.\ INEGI Census}} \\", r"\hline",
       r"Crop & Model & $N$ & $R^2$ & RMSE \\", r"\hline"] + rowsA + [
-      r"\multicolumn{5}{l}{\textit{Panel B: vs.\ SIAP Municipal Estimates}} \\", r"\hline",
+      r"\multicolumn{5}{l}{\textit{Panel B: vs.\ DGSIAP Municipal Estimates}} \\", r"\hline",
       r"Crop & Model & $N$ & $R^2$ & RMSE \\", r"\hline"] + rowsB + [
       r"\end{tabular}", r"\end{table}", ""]
 
-for d in [table_dir, overleaf]:
-    out =  os.path.join(d, "accuracy_other_crops_mun_2022.tex")
-    with open(out, "w") as f:
-        f.write("\n".join(L))
-    print("Wrote", out)
+# Overleaf copy is owned by analysis/04_copy_to_overleaf (single road).
+out =  os.path.join(table_dir, "accuracy_other_crops_mun_2022.tex")
+with open(out, "w") as f:
+    f.write("\n".join(L))
+print("Wrote", out)

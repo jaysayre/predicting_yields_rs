@@ -1,29 +1,38 @@
 ### 02_accuracy_maize.mk
-# Maize accuracy evaluation — every maize paper table/figure built here except
-# Table 1 (train/05, needs the holdout retrains) and Table A3 (analysis/03).
-# Scripts are numbered by step:
-#   1_masked_muni_cv            NDVI(masked) muni CV + feature cache
-#   2_masked_adc_eval           NDVI(masked) ADC preds  -> NDVI rows everywhere
-#   3_oracle_adc_ceiling        oracle benchmark csv
-#   4_accuracy_main_2022        Tables 2/A1/A2 + A5/A6 + scatter figures
-#   5_mun_survey_improvement    Table 5
-#   6_census_thought_all_models Table 3
-#   7_accuracy_profile_by_adc_chars  Table 4
-#   8_accuracy_cimmyt_profile   Table 6
-#   9_exante_trust_features     ex-ante per-mun feature csv
-#   10_exante_trust_composite   unsupervised trust index (+ validation prints)
-#   11_exante_trust_across_models  cross-model RF validation csv
-#   12/13_fig_*                 Figures 6 and 7 (pdf)
-#   14/15                       Figure 2 chips fetch (manual GEE) + diagram
-# Prose-stat utilities (unnumbered, run on demand): robustness_lambda_ci_qbin,
-# sample_accounting_and_lambda, rho_irrigation_bound.
+# Maize accuracy evaluation — every maize paper table/figure is built here except
+# the municipality validation table (train/04, needs the holdout retrains) and
+# the other-crop tables (analysis/03). Scripts run in step order:
+#   1_masked_muni_cv              NDVI (masked) muni CV + muni feature cache
+#   2_masked_adc_eval             NDVI (masked) ADC preds  -> NDVI rows everywhere
+#   3_oracle_adc_ceiling          oracle (ADC-trained) benchmark csv
+#   4_accuracy_main_2022          main accuracy tables (spring-summer, combined, fall-winter),
+#                                 common-sample tables, scatter figures
+#   5_mun_survey_improvement      municipality-aggregation table (accuracy_mun_level)
+#   6_census_thought_all_models   census thought-experiment table
+#   7_accuracy_profile_by_adc_chars  accuracy by ADC characteristics
+#   8_accuracy_cimmyt_profile     CIMMYT external-validation table
+#   9_exante_trust_features       ex-ante per-municipality feature csv
+#   10_exante_trust_composite     unsupervised ex-ante skill index (+ validation prints)
+#   11_exante_trust_across_models cross-model RF validation csv
+#   12_fig_representativeness_targeting / 13_fig_ranking_inversion   ex-ante targeting figures
+#   14_fetch_mun_chips_fig        AEF chips for the featurization diagram (manual GEE fetch, run once)
+#   15_fig_methodology_diagram    featurization diagram (fig:methodology)
+#   16_fig_pipeline_diagram       pipeline overview (fig:pipeline)
+#   17_rho_irrigation_bound       lambda from the irrigation projection (public data)
+#   18_w_public_selection         ensemble weight w from public data
+#   19_robustness_lambda_ci_qbin  bootstrap CIs, lambda curve, quantile-bin robustness
+#   20_sample_accounting_and_lambda  sample-size accounting + dispersion gauge
+# Steps 17-20 print the numbers cited in the prose (no .tex output); the
+# lambda = 0.72 and w = 0.5 they select are entered as constants in steps 4-16
+# (LAM / W in each script). Run them with `make robustness_stats` etc.
 # dep/ holds superseded generators and one-off diagnostics.
 #
-# FROZEN COAUTHOR INPUTS (no in-repo producer; documented 2026-08-28):
-#   Data/predictions/adc_alpha_earth_preds.csv     "AEF mean" rows
-#   Data/predictions/adc_aef_hist_gb_preds.parquet "AEF Hist" rows
-# The "Agg-NN" input adc_mlp_yield_preds.csv is produced by
-# train/05_train_agg_nn/agg_nn_sweep.py (Phase C run).
+# Model prediction inputs (all produced in-repo):
+#   "AEF Hist"      adc_aef_hist_bins_gb_preds.parquet   train/03 step 2
+#   "AEF Hist Ens." adc_aef_hist_ens_eval.parquet        train/03 step 2
+#   "AEF mean"      adc_alpha_earth_preds_maize.parquet  train/03 step 1
+#   "Agg-NN"        adc_mlp_yield_preds.csv              train/04 step 2
+#   "NDVI (masked)" adc_aefn2_masked_preds.parquet       step 2 below
 SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
@@ -47,12 +56,19 @@ accuracy_maize: \
 	$(TABLES_DIR)/accuracy_profile_by_adc_chars.tex \
 	$(TABLES_DIR)/accuracy_cimmyt_profile.tex \
 	$(EXTRAS_DIR)/fig_representativeness_targeting.pdf \
-	$(EXTRAS_DIR)/fig_ranking_inversion.pdf
+	$(EXTRAS_DIR)/fig_ranking_inversion.pdf \
+	$(PLOTS_DIR)/fig_methodology_diagram.pdf \
+	$(PLOTS_DIR)/fig_pipeline_diagram.pdf
+
+MODEL_PREDS := $(PREDS_DIR)/adc_aef_hist_bins_gb_preds.parquet $(PREDS_DIR)/adc_aef_hist_ens_eval.parquet \
+               $(PREDS_DIR)/adc_alpha_earth_preds_maize.parquet $(PREDS_DIR)/adc_mlp_yield_preds.csv \
+               $(PREDS_DIR)/adc_aefn2_masked_preds.parquet
 
 # ── Step 1: NDVI (masked) muni-level CV + feature cache ──────────────────
 # Also writes Data/cropland_features/muni_aefn2_masked.parquet, which
-# train/05_train_agg_nn (holdout retrains) consumes.
-$(PREDS_DIR)/mun_aefn2_masked_gb_kfold_preds.parquet: $(TASK_DIR)/1_masked_muni_cv.py
+# train/04_train_agg_nn (holdout retrains) consumes.
+$(PREDS_DIR)/mun_aefn2_masked_gb_kfold_preds.parquet \
+$(DATA_DIR)/Data/cropland_features/muni_aefn2_masked.parquet &: $(TASK_DIR)/1_masked_muni_cv.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 
 # ── Step 2: muni-trained masked model scored at the ADC level ────────────
@@ -64,28 +80,27 @@ $(PREDS_DIR)/adc_aefn2_masked_preds.parquet: $(TASK_DIR)/2_masked_adc_eval.py
 $(PREDS_DIR)/oracle_ceiling_2022.csv: $(TASK_DIR)/3_oracle_adc_ceiling.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# ── Step 4: main season tables + common-sample tables + scatter figures ──
+# ── Step 4: main accuracy tables + common-sample tables + scatter figures ─
 # One grouped rule for everything 4_accuracy_main_2022.py writes.
-$(PLOTS_DIR)/accuracy_combined_2022.tex $(PLOTS_DIR)/accuracy_spring_summer_2022.tex $(PLOTS_DIR)/accuracy_fall_winter_2022.tex $(PLOTS_DIR)/common_sample_combined_2022.tex $(PLOTS_DIR)/common_sample_spring_summer_2022.tex $(PLOTS_DIR)/accuracy_scatter_combined_2022.pdf $(PLOTS_DIR)/accuracy_scatter_seasonal_2022.pdf &: $(TASK_DIR)/4_accuracy_main_2022.py $(PREDS_DIR)/oracle_ceiling_2022.csv $(PREDS_DIR)/adc_aefn2_masked_preds.parquet
+$(PLOTS_DIR)/accuracy_combined_2022.tex $(PLOTS_DIR)/accuracy_spring_summer_2022.tex $(PLOTS_DIR)/accuracy_fall_winter_2022.tex $(PLOTS_DIR)/common_sample_combined_2022.tex $(PLOTS_DIR)/common_sample_spring_summer_2022.tex $(PLOTS_DIR)/accuracy_scatter_combined_2022.pdf $(PLOTS_DIR)/accuracy_scatter_seasonal_2022.pdf &: $(TASK_DIR)/4_accuracy_main_2022.py $(PREDS_DIR)/oracle_ceiling_2022.csv $(MODEL_PREDS)
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# ── Step 5: Table 5 (mun-level survey improvement, ex-ante ag-land weights) ─
+# ── Step 5: municipality-aggregation table (ex-ante ag-land weights) ──────
 $(TABLES_DIR)/accuracy_mun_level_2022.tex: $(TASK_DIR)/5_mun_survey_improvement.py \
-		$(PREDS_DIR)/mun_aefn2_masked_gb_kfold_preds.parquet \
-		$(PREDS_DIR)/mun_aef_hist_gb_kfold_preds.parquet
+		$(PREDS_DIR)/mun_aefn2_masked_gb_kfold_preds.parquet $(MODEL_PREDS)
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# ── Step 6: Table 3 (census thought experiment, all models) ──────────────
+# ── Step 6: census thought-experiment table (all models) ─────────────────
 # The Agg-NN (census-trained) panel consumes the retrain saved by
-# train/05_train_agg_nn/census_thought_experiment.py.
-$(TABLES_DIR)/census_thought_experiment_2022.tex: $(TASK_DIR)/6_census_thought_all_models.py $(PREDS_DIR)/adc_aggnn_census_trained_preds.parquet
+# train/04_train_agg_nn/5_census_thought_experiment.py.
+$(TABLES_DIR)/census_thought_experiment_2022.tex: $(TASK_DIR)/6_census_thought_all_models.py $(PREDS_DIR)/adc_aggnn_census_trained_preds.parquet $(MODEL_PREDS)
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# ── Step 7: Table 4 (accuracy by ADC characteristics) ────────────────────
+# ── Step 7: accuracy by ADC characteristics ──────────────────────────────
 $(TABLES_DIR)/accuracy_profile_by_adc_chars.tex: $(TASK_DIR)/7_accuracy_profile_by_adc_chars.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# ── Step 8: Table 6 (CIMMYT farmer-trial external validation) ────────────
+# ── Step 8: CIMMYT farmer-trial external validation ──────────────────────
 $(TABLES_DIR)/accuracy_cimmyt_profile.tex: $(TASK_DIR)/8_accuracy_cimmyt_profile.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
@@ -97,35 +112,45 @@ $(EXTRAS_DIR)/exante_trust_index.csv: $(TASK_DIR)/9_exante_trust_features.py $(T
 	cd $(DATA_DIR) && $(ML_ENV) python3 $(TASK_DIR)/9_exante_trust_features.py
 	cd $(DATA_DIR) && $(ML_ENV) python3 $(TASK_DIR)/10_exante_trust_composite.py
 
-$(EXTRAS_DIR)/exante_trust_across_models.csv: $(TASK_DIR)/11_exante_trust_across_models.py $(EXTRAS_DIR)/exante_trust_index.csv
+$(EXTRAS_DIR)/exante_trust_across_models.csv: $(TASK_DIR)/11_exante_trust_across_models.py $(EXTRAS_DIR)/exante_trust_index.csv $(MODEL_PREDS)
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 
-# ── Steps 12-13: Figures 6 and 7 ─────────────────────────────────────────
+# ── Steps 12-13: ex-ante targeting figures ───────────────────────────────
 $(EXTRAS_DIR)/fig_representativeness_targeting.pdf: $(TASK_DIR)/12_fig_representativeness_targeting.py $(EXTRAS_DIR)/exante_trust_index.csv
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
 $(EXTRAS_DIR)/fig_ranking_inversion.pdf: $(TASK_DIR)/13_fig_ranking_inversion.py $(EXTRAS_DIR)/exante_trust_across_models.csv
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# ── Steps 14-15: Figure 2 (methodology diagram) ──────────────────────────
-# 14 fetches GEE chips (network; run once), 15 draws the diagram.
+# ── Steps 14-16: featurization diagram + pipeline overview ───────────────
+# 14 fetches GEE chips (network; run once), 15 draws the featurization
+# diagram, 16 the pipeline overview.
 .PHONY: fetch_fig2_chips
 fetch_fig2_chips: $(TASK_DIR)/14_fetch_mun_chips_fig.py
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-$(PLOTS_DIR)/fig_methodology_diagram.pdf: $(TASK_DIR)/15_fig_methodology_diagram.py
+$(PLOTS_DIR)/fig_methodology_diagram.pdf: $(TASK_DIR)/15_fig_methodology_diagram.py $(PREDS_DIR)/mun_aef_hist_bins_gb_loyo_preds.parquet $(DATA_DIR)/Data/alpha_earth/fig2_mun_chips_meta.json
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
 
-# ── Prose-stat utilities (numbers cited in text, no .tex output) ─────────
-.PHONY: robustness_stats
-robustness_stats: $(TASK_DIR)/robustness_lambda_ci_qbin.py
+$(PLOTS_DIR)/fig_pipeline_diagram.pdf: $(TASK_DIR)/16_fig_pipeline_diagram.py $(PREDS_DIR)/adc_aef_hist_ens_eval.parquet
+	cd $(DATA_DIR) && $(MPC_ENV) python3 $<
+
+# ── Steps 17-20: prose-stat utilities (numbers cited in text, no .tex output)
+.PHONY: prose_stats rho_irrigation_bound w_public_selection robustness_stats sample_accounting
+prose_stats: rho_irrigation_bound w_public_selection robustness_stats sample_accounting
+
+# 17 — irrigation-projection bound + midpoint estimate for rho / lambda
+rho_irrigation_bound: $(TASK_DIR)/17_rho_irrigation_bound.py $(PREDS_DIR)/adc_aef_hist_ens_eval.parquet
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 
-.PHONY: sample_accounting
-sample_accounting: $(TASK_DIR)/sample_accounting_and_lambda.py
+# 18 — public-data selection of the ensemble weight w
+w_public_selection: $(TASK_DIR)/18_w_public_selection.py $(PREDS_DIR)/adc_aef_hist_ens_components.parquet
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<
 
-# Irrigation-projection bound + point estimate for rho/lambda (Sec 3.6)
-.PHONY: rho_irrigation_bound
-rho_irrigation_bound: $(TASK_DIR)/rho_irrigation_bound.py
+# 19 — bootstrap CIs, lambda curve, quantile-bin robustness (needs make train_aef_hist_ens_qbin)
+robustness_stats: $(TASK_DIR)/19_robustness_lambda_ci_qbin.py
+	cd $(DATA_DIR) && $(ML_ENV) python3 $<
+
+# 20 — sample-size accounting + dispersion gauge
+sample_accounting: $(TASK_DIR)/20_sample_accounting_and_lambda.py $(PREDS_DIR)/mun_aef_hist_bins_gb_kfold_preds.parquet
 	cd $(DATA_DIR) && $(ML_ENV) python3 $<

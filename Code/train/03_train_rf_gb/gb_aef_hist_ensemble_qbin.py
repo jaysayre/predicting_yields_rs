@@ -1,8 +1,8 @@
 """
 AEF Histogram Ensemble — Quantile-Bin Pilot
 
-Identical protocol to gb_aef_hist_ensemble.py (subsampled bins model, N=2
-multinomial draws, K=5, ensembled with the percentile model at w=0.4), but the
+Identical protocol to 2_gb_aef_hist_ensemble.py (subsampled bins model, N=2
+multinomial draws, K=5, ensembled with the percentile model at w=0.5), but the
 bin features come from per-dim equal-mass quantile edges
 (ee_alpha_earth_quantile_hist.py) instead of fixed-width bins on [-0.8, 0.8].
 
@@ -26,11 +26,11 @@ sys.stdout.reconfigure(line_buffering=True)
 
 
 # ============================================================
-# CONFIGURATION (matches gb_aef_hist_ensemble.py)
+# CONFIGURATION (matches 2_gb_aef_hist_ensemble.py)
 # ============================================================
 N_PIX       =  2       # pixels per subsample draw
 K_SAMP      =  5       # subsamples per mun-year
-W_BIN       =  0.4     # ensemble weight on bins model
+W_BIN       =  0.5     # ensemble weight on bins model
 EVAL_YEAR   =  2022    # INEGI census year for evaluation
 CROP        =  'Maize'
 SEASON      =  'Spring-Summer'
@@ -282,7 +282,7 @@ siap_mun = siap_mun[
 # above sums ALL growing seasons, which is right for the combined-season target
 # (`yield`) but a season mismatch for the P-V target (`yield_pv`): it removes a
 # bias defined on a different quantity than the one being scored, and inflates
-# the P-V corrected R2. Same fix as gb_aef_hist_ensemble.py / 4_accuracy_main_2022.py.
+# the P-V corrected R2. Same fix as 2_gb_aef_hist_ensemble.py / 4_accuracy_main_2022.py.
 siap_mun_pv = siap_2022[siap_2022['growing_season'] == SEASON].groupby('muncode').agg(
     {'q': 'sum', 'ha_planted': 'sum'}
 ).reset_index()

@@ -29,7 +29,7 @@ pct_cols  =  [f"A{d:02d}{s}" for d in range(64)
 pct_combined =  pct_cols + mean_cols
 cfg = dict(max_iter=1500, max_depth=8, learning_rate=0.03,
            min_samples_leaf=5, random_state=42, early_stopping=False)
-W_BIN = 0.4
+W_BIN = 0.5
 
 siap =  pd.read_stata(siapp)
 siap["muncode"] =  siap["muncode"].apply(lambda x: str(int(x)).zfill(5))

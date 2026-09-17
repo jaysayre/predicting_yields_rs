@@ -4,11 +4,11 @@ tables (Tables \ref{tab:accuracy_combined}, \ref{tab:accuracy_spring_summer}).
 
 Produces, for every model (grouped Landsat-derived vs AEF-derived), three rows:
   Raw      - uncorrected ADC predictions
-  Corr.    - additive ex-post correction toward the SIAP municipal yield, using
+  Corr.    - additive ex-post correction toward the DGSIAP municipal yield, using
              EX-ANTE agricultural-land weights (siap_agland_area) to form the
              predicted municipal mean -- NOT census planted area (land_input)
   Shrink   - within-municipality shrinkage of the raw deviations (CV lambda)
-plus the SIAP municipal-average benchmark. Metrics are computed against the
+plus the DGSIAP municipal-average benchmark. Metrics are computed against the
 INEGI 2022 census at the ADC level (combined = yield, spring-summer = yield_pv).
 
 This consolidates the previously hand-assembled tables into one reproducible
@@ -41,7 +41,7 @@ def met(df, ycol, pcol):
     s = df[[ycol, pcol, "muncode"]].replace([np.inf, -np.inf], np.nan).dropna()
     return (len(s), r2(s[ycol], s[pcol]), between_r2(s, ycol, pcol),
             within_r2(s, ycol, pcol), np.sqrt(np.mean((s[ycol].values-s[pcol].values)**2)))
-LAM_DEPLOY = 0.74   # deployed shrinkage factor: public irrigation-projection point estimate (Sec 3.6)
+LAM_DEPLOY = 0.72   # deployed shrinkage factor: public irrigation-projection point estimate (Sec 3.6)
 def cv_lambda(df, pcol, ycol, gc="muncode"):
     s = df[[ycol, pcol, gc]].replace([np.inf, -np.inf], np.nan).dropna().copy()
     cnt = s.groupby(gc)[ycol].transform("size"); s = s[cnt >= 2].reset_index(drop=True)
@@ -105,13 +105,13 @@ siap = pd.read_stata(os.path.join(home,"Dropbox/Projects/Maize_prediction/Data/S
 siap["muncode"] = siap["muncode"].apply(lambda x: str(int(x)).zfill(5))
 s22 = siap[(siap["name"]=="Maize")&(siap["year"]==2022)]; s22 = s22[~s22["muncode"].str.endswith("000")]
 
-# ── Season-matched SIAP municipal anchors (fixed 2026-08-15) ──────────────
+# ── Season-matched DGSIAP municipal anchors (fixed 2026-08-15) ──────────────
 # The anchor must match the census target being scored. Previously ONE
 # all-seasons anchor was used for every table, so the P-V and O-I tables
 # corrected against a combined-season municipal mean -- a season mismatch that
 # removes a bias defined on a different quantity than the one being scored.
 # It was worth ~+0.08 R2 on the P-V corrected row (0.403 true -> 0.481), in the
-# direction that flatters the model. The anchor also defines the SIAP benchmark
+# direction that flatters the model. The anchor also defines the DGSIAP benchmark
 # row and the common-sample intersection, so all three are now season-matched.
 #   combined      -> all seasons summed   (unchanged; correct for `yield`)
 #   spring_summer -> Spring-Summer only   (matches `yield_pv`)
@@ -141,9 +141,11 @@ ev["siap"] = ev["muncode"].map(ANCHORS["combined"])   # default
 # Only the 3-period-window pair is shown; the 2-period and raw-coefficient
 # variants underperform (see harmonic_adc_eval_summary.csv) and are omitted.
 LANDSAT = [("NDVI","adc_aefn2_masked_preds.parquet","pred")]  # aefn2 masked baseline (replaces h3 NDVI Hist/Q-Hist)
-AEFM    = [("AEF mean","adc_alpha_earth_preds.csv","yield_pred"),
+# "AEF mean" = train/03_train_rf_gb/1_rf_yield_prediction.py (2026-09-03: IMPROVED=False, RF on the 64 means alone).
+# Until 2026-09-02 this row read adc_alpha_earth_preds.csv, an untracked Nov-2025 RF run with no producer.
+AEFM    = [("AEF mean","adc_alpha_earth_preds_maize.parquet","yield_pred"),
            ("Agg-NN","adc_mlp_yield_preds.csv","pred_yield"),
-           ("AEF Hist","adc_aef_hist_gb_preds.parquet","yield_pred"),
+           ("AEF Hist","adc_aef_hist_bins_gb_preds.parquet","yield_pred"),
            ("AEF Hist Ens.", None, None)]  # already in eval frame
 for nm,f,c in LANDSAT+AEFM:
     if f is None: continue
@@ -167,7 +169,7 @@ def model_rows(label, season_y):
     return rows
 
 def build_table(season_y, label_season, fname, tag, show_ci=True):
-    set_anchor(tag)                      # season-matched SIAP anchor
+    set_anchor(tag)                      # season-matched DGSIAP anchor
     orc_season = {"combined": "combined", "spring_summer": "spring_summer"}.get(tag)
     ci_note = (r" Municipality-cluster bootstrap 95\% confidence intervals for $R^2$ "
                r"and Within $R^2$ in brackets.") if show_ci else ""
@@ -178,7 +180,7 @@ def build_table(season_y, label_season, fname, tag, show_ci=True):
     L = [r"\begin{table}[!htbp]", r"\centering",
          r"\caption{Accuracy metrics for maize yield predictions vs.\ INEGI 2022 census, "
          rf"ADC level --- {label_season}. Corrected rows use ex-ante agricultural-land "
-         rf"weights for the municipal anchor, and the anchor is the SIAP municipal "
+         rf"weights for the municipal anchor, and the anchor is the DGSIAP municipal "
          rf"maize yield for {ANCHOR_NOTE[tag]}, matching the census target scored "
          rf"here. All rows are evaluated on the ADCs for which the AEF Hist "
          rf"Ensemble is defined (at least one cropland pixel; see the sample "
@@ -202,11 +204,11 @@ def build_table(season_y, label_season, fname, tag, show_ci=True):
     emit(LANDSAT)
     L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{AEF-derived features}} \\"]
     emit(AEFM)
-    # Benchmark: SIAP municipal average + (combined/P-V) the ADC-trained oracle ceiling
+    # Benchmark: DGSIAP municipal average + (combined/P-V) the ADC-trained oracle ceiling
     sb = ev.assign(_siap=ev["siap"])
     n, ov, bt, wt, rm = met(sb, season_y, "_siap")
     L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{Benchmark}} \\",
-          f"SIAP Mun.\\ Avg. & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\"]
+          f"DGSIAP Mun.\\ Avg. & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\"]
     sci = boot_ci(sb, season_y, "_siap")
     if sci and show_ci:
         (olo, ohi), _ = sci
@@ -225,8 +227,8 @@ def build_table(season_y, label_season, fname, tag, show_ci=True):
 
 def build_common_sample_table(season_y, label_season, fname, tag):
     """Every model evaluated on the SAME ADCs (intersection of all model
-    predictions + SIAP), so cross-model differences are not sample composition."""
-    set_anchor(tag)                      # season-matched SIAP anchor
+    predictions + DGSIAP), so cross-model differences are not sample composition."""
+    set_anchor(tag)                      # season-matched DGSIAP anchor
     models =  [nm for nm,_,_ in LANDSAT + AEFM]
     cs =  ev.dropna(subset=models + ["siap", season_y]).copy()
     n_cs =  len(cs)
@@ -234,7 +236,7 @@ def build_common_sample_table(season_y, label_season, fname, tag):
          r"\caption{Common-sample accuracy for maize yield predictions vs.\ INEGI 2022 "
          rf"census, ADC level --- {label_season}. Every model is evaluated on the "
          rf"\emph{{same}} {n_cs:,} ADCs (the intersection of ADCs for which all Landsat- "
-         rf"and AEF-derived models produce a prediction and a SIAP municipal yield for "
+         rf"and AEF-derived models produce a prediction and a DGSIAP municipal yield for "
          rf"{ANCHOR_NOTE[tag]} exists), "
          r"so cross-model differences are not driven by sample composition. RMSE in t/ha.}",
          rf"\label{{tab:common_sample_{tag}}}", r"\begin{tabular}{lrrrrr}", r"\hline",
@@ -256,7 +258,7 @@ def build_common_sample_table(season_y, label_season, fname, tag):
     cs["_siap"] =  cs["siap"]
     n, ov, bt, wt, rm =  met(cs, season_y, "_siap")
     L += [r"\addlinespace", r"\multicolumn{6}{l}{\textit{Benchmark}} \\",
-          f"SIAP Mun.\\ Avg. & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\",
+          f"DGSIAP Mun.\\ Avg. & {n:,} & {fmt(ov)} & {fmt(bt)} & {fmt(0.0)} & {fmt(rm)} \\\\",
           r"\hline", r"\end{tabular}", r"\end{table}", ""]
     out = os.path.join(plot_dir, fname)
     with open(out, "w") as f: f.write("\n".join(L))
@@ -273,22 +275,63 @@ build_common_sample_table("yield", "Combined season", "common_sample_combined_20
 build_common_sample_table("yield_pv", "Spring-summer (P-V) season", "common_sample_spring_summer_2022.tex", "spring_summer")
 
 # ── Scatter figures (replaces the notebook's old RS-based panels) ──
-import matplotlib
-matplotlib.use("Agg")
+import subprocess
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-plt.rcParams.update({"font.family": "serif", "axes.edgecolor": "#404040",
-                     "axes.labelcolor": "#404040", "xtick.color": "#404040",
-                     "ytick.color": "#404040", "font.size": 11})
+from cycler import cycler
 
-def scatter_panel(ax, y, yh, title):
+base_font_size = 12  # match \documentclass[12pt]{article}
+mpl.use("pgf")  # typeset via LaTeX/pgf so fonts match the paper (Times, as in fig 2)
+mpl.rcParams.update({
+    "pgf.texsystem": "pdflatex",
+    "pgf.rcfonts": False,            # don't let mpl override fonts
+    "font.family": "serif",
+    "font.serif": ["Times"],
+    "axes.unicode_minus": False,
+    "font.size": base_font_size,            # default text
+    "axes.titlesize": base_font_size + 3,   # plot titles
+    "axes.labelsize": base_font_size + 2,   # x/y labels
+    "xtick.labelsize": base_font_size,      # tick labels
+    "ytick.labelsize": base_font_size,
+    "legend.fontsize": base_font_size,
+    "figure.titlesize": base_font_size + 3,
+    "axes.facecolor": "white",
+    "figure.facecolor": "white",
+    "axes.edgecolor": "#404040",
+    "axes.labelcolor": "#404040",
+    "xtick.color": "#404040",
+    "ytick.color": "#404040",
+    "grid.color": "#D0D0D0",
+    "grid.linestyle": (0, (1, 3)),   # fine dotted
+    "grid.linewidth": 0.6,
+    "axes.prop_cycle": cycler(color=["#4A4A4A"]),  # default series color
+    "pgf.preamble": r"""
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+""",
+})
+
+def save_pdf_png(fig, stem):
+    """pgf backend writes the PDF; rasterize it to PNG with pdftoppm (as in 15_fig_methodology_diagram.py)."""
+    pdf = os.path.join(plot_dir, stem + ".pdf")
+    fig.savefig(pdf, bbox_inches="tight", dpi=300)
+    subprocess.run(["pdftoppm", "-png", "-r", "200", "-singlefile", pdf, os.path.join(plot_dir, stem)], check=True)
+
+def scatter_panel(ax, y, yh, title, wr2=None):
     m = np.isfinite(y) & np.isfinite(yh)
     ax.hexbin(y[m], yh[m], gridsize=45, bins="log", cmap="viridis",
-              extent=(0, 12, 0, 12), linewidths=0)
+              extent=(0, 12, 0, 12), linewidths=0, rasterized=True)  # raster: pgf cannot hold the hex paths
     ax.plot([0, 12], [0, 12], "--", color="#B0B0B0", lw=1.0)
     ax.set_xlim(0, 12); ax.set_ylim(0, 12)
-    ax.set_title(f"{title}\n$R^2$ = {r2(y[m], yh[m]):.3f}", fontsize=10)
-    ax.set_xlabel("Reported Yield (t/ha)", fontsize=9)
-    ax.tick_params(labelsize=8, length=0)
+    # numbers stay in text mode (Times digits, as in the rest of the paper); only
+    # R^2 and a negative sign are math, matching fmt() in the tables above
+    stat = f"$R^2$ = {fmt(r2(y[m], yh[m]))}"
+    if wr2 is not None:
+        if np.isfinite(wr2) and abs(wr2) < 5e-4: wr2 = 0.0   # no "$-$0.000" for the DGSIAP panel
+        stat += f",  within-$R^2$ = {fmt(wr2)}"
+    ax.set_title(f"{title}\n{stat}", fontsize=base_font_size)
+    ax.set_xlabel("Reported Yield (t/ha)", fontsize=base_font_size - 1)
+    ax.tick_params(labelsize=base_font_size - 2, length=0)
 
 SCATTER = ["NDVI", "AEF mean", "Agg-NN"]        # raw + corrected pairs
 for m in SCATTER:                                        # corrected columns
@@ -298,26 +341,49 @@ pairs = [(m, m + " Raw") for m in SCATTER]
 cols  = []
 for m in SCATTER:
     cols += [(m, f"{m} Raw"), (f"_{m}_corr", f"{m} Corr.")]
-cols += [("siap", "SIAP")]
+cols += [("siap", "DGSIAP")]
 
-fig, axes = plt.subplots(1, len(cols), figsize=(3.3 * len(cols), 3.5))
-for ax, (c, nm) in zip(axes, cols):
-    scatter_panel(ax, ev["yield"].values, ev[c].values, nm)
-axes[0].set_ylabel("Predicted Yield (t/ha)", fontsize=9)
-fig.suptitle("Predicted vs. Reported Maize Yield (Combined Season, 2022)", y=1.04)
+# ── Combined-season figure: the deployed Shrink specification of every model
+#    plus the DGSIAP municipal-average benchmark. The shrink columns are built
+#    exactly as the table rows are (shrink of the RAW predictions at
+#    LAM_DEPLOY), so the panel R2s match Table \ref{tab:accuracy_combined}.
+#    NOTE: set_anchor("combined") comes AFTER the `correct()` loop above, so the
+#    seasonal figure's corrected panels are untouched; it only points
+#    ev["siap"] at the combined-season anchor used by the benchmark panel.
+set_anchor("combined")
+COMBINED_PANELS = ["AEF Hist Ens.", "DGSIAP", "AEF Hist", "Agg-NN", "AEF mean", "NDVI"]
+panels = []
+for m in COMBINED_PANELS:
+    if m == "DGSIAP":
+        panels.append(("siap", "DGSIAP Mun. Avg."))
+        continue
+    c = f"_{m}_shrink"
+    ev[c] = shrink(ev, m, LAM_DEPLOY)
+    panels.append((c, f"{m} Shrink"))
+
+ncol = 3
+grid = [panels[i:i + ncol] for i in range(0, len(panels), ncol)]
+fig, axes = plt.subplots(len(grid), ncol, figsize=(4.0 * ncol, 8.0))
+for row, ax_row in zip(grid, axes):
+    for (c, nm), ax in zip(row, ax_row):
+        scatter_panel(ax, ev["yield"].values, ev[c].values, nm,
+                      wr2=within_r2(ev, "yield", c))
+for ax in axes[0]:
+    ax.set_xlabel("")
+for ax in axes[:, 0]:
+    ax.set_ylabel("Predicted Yield (t/ha)", fontsize=base_font_size - 1)
+fig.suptitle("Predicted vs. Reported Maize Yield (Combined Season, 2022)", y=1.01)
 fig.tight_layout()
-fig.savefig(os.path.join(plot_dir, "accuracy_scatter_combined_2022.pdf"), bbox_inches="tight")
-fig.savefig(os.path.join(plot_dir, "accuracy_scatter_combined_2022.png"), bbox_inches="tight", dpi=200)
+save_pdf_png(fig, "accuracy_scatter_combined_2022")
 print("Wrote accuracy_scatter_combined_2022.{pdf,png}")
 
-scols = cols[:-1]                                        # seasonal: no SIAP panel
+scols = cols[:-1]                                        # seasonal: no DGSIAP panel
 fig, axes = plt.subplots(2, len(scols), figsize=(3.3 * len(scols), 7.0))
 for row, ycol, lab in [(0, "yield_oi", "Fall-Winter"), (1, "yield_pv", "Spring-Summer")]:
     for ax, (c, nm) in zip(axes[row], scols):
         scatter_panel(ax, ev[ycol].values, ev[c].values, nm)
-    axes[row][0].set_ylabel(f"Predicted Yield (t/ha)\n[{lab}]", fontsize=9)
+    axes[row][0].set_ylabel(f"Predicted Yield (t/ha)\n[{lab}]", fontsize=base_font_size - 1)
 fig.suptitle("Predicted vs. Reported Maize Yield by Season (2022)", y=1.01)
 fig.tight_layout()
-fig.savefig(os.path.join(plot_dir, "accuracy_scatter_seasonal_2022.pdf"), bbox_inches="tight")
-fig.savefig(os.path.join(plot_dir, "accuracy_scatter_seasonal_2022.png"), bbox_inches="tight", dpi=200)
+save_pdf_png(fig, "accuracy_scatter_seasonal_2022")
 print("Wrote accuracy_scatter_seasonal_2022.{pdf,png}")

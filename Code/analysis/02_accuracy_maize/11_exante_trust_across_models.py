@@ -27,9 +27,9 @@ ev = pd.read_parquet(os.path.join(P, "adc_aef_hist_ens_eval.parquet"))[["adc","m
 # ADCs with no cropland pixels are excluded for every model.
 ev = ev[ev["AEF Hist Ens."].notna()].copy()
 MODELS = [("NDVI","adc_aefn2_masked_preds.parquet","pred"),  # production masked NDVI baseline
-          ("AEF mean","adc_alpha_earth_preds.csv","yield_pred"),
+          ("AEF mean","adc_alpha_earth_preds_maize.parquet","yield_pred"),
           ("Agg-NN","adc_mlp_yield_preds.csv","pred_yield"),
-          ("AEF Hist","adc_aef_hist_gb_preds.parquet","yield_pred"),
+          ("AEF Hist","adc_aef_hist_bins_gb_preds.parquet","yield_pred"),
           ("AEF Hist Ens.", None, None)]
 for nm,f,c in MODELS:
     if f is None: continue

@@ -5,8 +5,8 @@ Step 15 of the accuracy chain; prerequisite chips fetched by
 14_fetch_mun_chips_fig.py. Supersedes dep/fig_methodology_diagram.py (v1).
 
 Top row (inputs / the problem):
-  A  Maize yields across Mexico (SIAP mun choropleth), two example muns outlined
-  B  The two example municipalities at true relative scale, filled by yield
+  A  Maize yields across Mexico (DGSIAP mun choropleth), two example muns outlined
+  B  The two example municipalities at true relative scale (neutral fill)
   C  True-color (Sentinel-2 2022) imagery for each, a 2 km cropland window
 
 Bottom row (the method; the original 4-panel pipeline, re-targeted to the two muns):
@@ -16,7 +16,7 @@ Bottom row (the method; the original 4-panel pipeline, re-targeted to the two mu
                           dims in natural label order (not sorted by contrast)
   4  Relate to yields - LOYO scatter, arrows to the two municipalities' points
 
-Two example municipalities (problem_statement.png; SIAP maize Spring-Summer 2022):
+Two example municipalities (problem_statement.png; DGSIAP maize Spring-Summer 2022):
   20517  Santo Domingo Tepuxtepec, OAX   1.30 t/ha   114 km2    (low)
   03001  Comondu, BCS                    6.87 t/ha  18156 km2    (high)
 
@@ -83,7 +83,7 @@ shp_path  =  os.path.join(proj_dir, "Data", "muncodes", "shp", "MUNICIPIOS.shp")
 siap_path =  os.path.join(home_dir, "Dropbox", "Projects", "Maize_prediction", "Data", "SIAP", "Cleaned", "siap_ag_prod_estimation_by_season.dta")
 
 hist_path =  os.path.join(aef_dir, "alpha_earth_mex_mun_binned_hist.parquet")
-loyo_path =  os.path.join(pred_dir, "mun_aef_hist_gb_loyo_preds.parquet")
+loyo_path =  os.path.join(pred_dir, "mun_aef_hist_bins_gb_loyo_preds.parquet")
 meta_path =  os.path.join(aef_dir, "fig2_mun_chips_meta.json")
 
 out_pdf   =  os.path.join(plot_dir, "fig_methodology_diagram.pdf")
@@ -99,9 +99,8 @@ GRAY      =  "#4A4A4A"
 MUTED     =  "#7A7A7A"
 bin_cols  =  [f"A{d:02d}_b{b}" for d in range(N_DIMS) for b in range(N_BINS)]
 div_cmap  =  LinearSegmentedColormap.from_list("hilo", [LO_COL, "#FFFFFF", HI_COL])
-# sequential yield ramp: pale -> deep green (magnitude, single hue)
-yld_cmap  =  LinearSegmentedColormap.from_list(
-    "yield", ["#F1F4E8", "#A6C36F", "#4C8C2B", "#1C5A1C"])
+# sequential yield ramp: viridis (purple -> yellow), matching the other yield maps
+yld_cmap  =  mpl.colormaps["viridis"]
 
 LO, HI    =  "20517", "03001"                       # the two example muns
 
@@ -110,7 +109,7 @@ meta =  json.load(open(meta_path))
 y_lo =  meta[LO]["yield"]
 y_hi =  meta[HI]["yield"]
 
-# -- National maize yields (SIAP SS 2022) -------------------
+# -- National maize yields (DGSIAP SS 2022) -------------------
 siap =  pd.read_stata(siap_path)
 siap["muncode"] =  siap["muncode"].apply(lambda x: str(int(x)).zfill(5))
 siap["yield"]   =  siap["q"] / siap["ha_planted"]
@@ -221,8 +220,8 @@ gap   =  (hx1 - hx0) * 0.10
 # small mun: centre it, then shift left of Comondu with a gap (true scale kept)
 g_loT =  translate(g_lo, -(lx0 + lx1) / 2 - ((hx1 - hx0) / 2 + gap + (lx1 - lx0) / 2),
                    -(ly0 + ly1) / 2)
-for g, col, y in [(g_hiT, HI_COL, y_hi), (g_loT, LO_COL, y_lo)]:
-    gpd.GeoSeries([g]).plot(ax=axB, color=yld_cmap(ynorm(y)), edgecolor=col, linewidth=1.8, rasterized=True)
+for g, col in [(g_hiT, HI_COL), (g_loT, LO_COL)]:   # neutral fill; identity colour on the outline
+    gpd.GeoSeries([g]).plot(ax=axB, color="#E6E6E6", edgecolor=col, linewidth=1.8, rasterized=True)
 axB.set_aspect("equal"); axB.set_axis_off()
 # labels
 _wbox =  dict(facecolor="white", alpha=0.82, edgecolor="none", boxstyle="round,pad=0.2")
@@ -243,7 +242,7 @@ axB.annotate(r"same unit, $160\times$ the area", (0.5, 1.0), xycoords="axes frac
 axC_list =  chip_pair(gs[0, 8:12], load_rgb, dimlabel="2 km window, 10 m pixels")
 
 # --- 1: AEF embedding chips --------------------------------
-ax1_list =  chip_pair(gs[1, 0:3], load_aef, dimlabel=f"dim A{dim:02d} " r"($\times$64)")
+ax1_list =  chip_pair(gs[1, 0:3], load_aef, dimlabel=f"dim A{dim:02d}")
 
 # --- 2: per-dim histogram, two muns ------------------------
 ax2   =  fig.add_subplot(gs[1, 3:6])
@@ -264,10 +263,11 @@ for s in ["top", "right"]:
 ax2.annotate(r"8 fixed bins $\times$ 64 dims = 512 features", (0.5, -0.30),
              xycoords="axes fraction", ha="center", va="top",
              fontsize=base_font_size - 1, color=MUTED)
-for y, col, lab in [(0.93, HI_COL, "Comondu (high)"), (0.83, LO_COL, "Tepuxtepec (low)")]:
-    ax2.add_patch(Rectangle((0.045, y), 0.05, 0.055, transform=ax2.transAxes,
+ax2.set_ylim(0, 1.0)                                # headroom so the legend clears the bars
+for y, col, lab in [(0.93, HI_COL, "Comondu (high)"), (0.85, LO_COL, "Tepuxtepec (low)")]:   # top-right, clear of the bars
+    ax2.add_patch(Rectangle((0.60, y), 0.05, 0.055, transform=ax2.transAxes,
                             clip_on=False, facecolor=col, edgecolor="none"))
-    ax2.annotate(lab, (0.11, y + 0.028), xycoords="axes fraction", ha="left",
+    ax2.annotate(lab, (0.665, y + 0.028), xycoords="axes fraction", ha="left",
                  va="center", fontsize=base_font_size - 2, color=GRAY)
 
 # --- 3: 64x8 mun contrast, natural dim order ---------------
@@ -318,14 +318,10 @@ ax4.set_ylabel("predicted yield (t/ha)", fontsize=base_font_size)
 ax4.tick_params(length=0, labelsize=base_font_size - 1)
 for s in ["top", "right"]:
     ax4.spines[s].set_visible(False)
-ax4.annotate(f"gradient boosting, LOYO municipalities, {YEAR}", (0.5, -0.30),
-             xycoords="axes fraction", ha="center", va="top",
-             fontsize=base_font_size - 1, color=MUTED)
-
 # --- panel titles ------------------------------------------
-top_titles =  [(axA, r"\textbf{Maize yields across Mexico}" "\nSIAP municipal yields, 2022"),
-               (axB, r"\textbf{Two example municipalities}" "\ntrue relative scale, filled by yield"),
-               (axC_list[0], r"\textbf{True-color imagery}" "\nSentinel-2, 2022")]
+top_titles =  [(axA, r"\textbf{Maize yields across Mexico}" "\nMunicipality level DGSIAP yields"),
+               (axB, r"\textbf{Two example municipalities}" "\ntrue relative scale"),
+               (axC_list[0], r"\textbf{True-color imagery}")]
 for ax, t in top_titles:
     pos =  ax.get_position()
     fig.text((pos.x0 + pos.x1) / 2, 0.965, t, ha="center", va="top",
@@ -334,15 +330,11 @@ for ax, t in top_titles:
 bot_titles =  [(ax1_list[0], r"\textbf{1 $\cdot$ Extract}" "\nAEF embeddings (GEE),\n64 dims / 10 m cropland pixel"),
                (ax2, r"\textbf{2 $\cdot$ Histogram + quantize}" "\neach dim binned into\n8 fixed-width bins"),
                (ax3, r"\textbf{3 $\cdot$ 2D representation}" "\nhigh- minus low-yield mun mass\nacross all 64 $\\times$ 8 bins"),
-               (ax4, r"\textbf{4 $\cdot$ Relate to yields}" "\ntrained on SIAP\nmunicipal yields")]
+               (ax4, r"\textbf{4 $\cdot$ Relate to yields}")]
 for ax, t in bot_titles:
     pos =  ax.get_position()
     fig.text((pos.x0 + pos.x1) / 2, 0.475, t, ha="center", va="top",
              fontsize=base_font_size, color=GRAY, linespacing=1.35)
-
-# --- imagery -> embedding note (inter-panel connector arrows removed) ---
-fig.text(0.30, 0.515, "imagery $\\rightarrow$ embedding\n(same 2 km window)",
-         ha="center", va="center", fontsize=base_font_size - 3, color=MUTED, style="italic")
 
 os.makedirs(plot_dir, exist_ok=True)
 fig.savefig(out_pdf, bbox_inches="tight")

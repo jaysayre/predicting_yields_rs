@@ -1,7 +1,7 @@
 """
 AEF Histogram Ensemble v2 — Dirichlet-Multinomial Coarsening
 
-Variant of gb_aef_hist_ensemble.py that replaces the fixed N=2 multinomial
+Variant of 2_gb_aef_hist_ensemble.py that replaces the fixed N=2 multinomial
 subsampling with distributionally faithful coarsening:
 
   1. Effective pixel count N is drawn from the empirical distribution of ADC
@@ -34,7 +34,7 @@ sys.stdout.reconfigure(line_buffering=True)
 # CONFIGURATION
 # ============================================================
 K_SAMP      =  5       # coarse subsamples per mun-year (as in original)
-W_BIN       =  0.4     # ensemble weight on bins model (as in original)
+W_BIN       =  0.5     # ensemble weight on bins model (as in original)
 EVAL_YEAR   =  2022    # INEGI census year for evaluation
 CROP        =  'Maize'
 SEASON      =  'Spring-Summer'
@@ -346,7 +346,7 @@ siap_mun = siap_mun[
 # above sums ALL growing seasons, which is right for the combined-season target
 # (`yield`) but a season mismatch for the P-V target (`yield_pv`): it removes a
 # bias defined on a different quantity than the one being scored, and inflates
-# the P-V corrected R2. Same fix as gb_aef_hist_ensemble.py / 4_accuracy_main_2022.py.
+# the P-V corrected R2. Same fix as 2_gb_aef_hist_ensemble.py / 4_accuracy_main_2022.py.
 siap_mun_pv = siap_2022[siap_2022['growing_season'] == SEASON].groupby('muncode').agg(
     {'q': 'sum', 'ha_planted': 'sum'}
 ).reset_index()
@@ -410,14 +410,14 @@ if os.path.exists(base_path):
     base_pv = base[base['yield_pv'].notna()].copy()
     print("  (P-V)")
     eval_row(base_pv, 'yield_pv', 'pred',      'AEF Hist Ens. Raw (orig)')
-    # Season-matched anchor: gb_aef_hist_ensemble.py now writes pred_corr_pv
+    # Season-matched anchor: 2_gb_aef_hist_ensemble.py now writes pred_corr_pv
     # (Spring-Summer anchor) alongside pred_corr (all seasons). Scoring the P-V
     # target against pred_corr would repeat the mismatch fixed 2026-08-15.
     # Fall back only if the baseline parquet predates that fix.
     _pv_col = 'pred_corr_pv' if 'pred_corr_pv' in base_pv.columns else 'pred_corr'
     if _pv_col == 'pred_corr':
         print("    (warning: baseline parquet has no pred_corr_pv — stale, "
-              "re-run gb_aef_hist_ensemble.py)")
+              "re-run 2_gb_aef_hist_ensemble.py)")
     eval_row(base_pv, 'yield_pv', _pv_col, 'AEF Hist Ens. Corr. (orig)')
 
 print(f"\nRuntime: {(time.time()-t0)/60:.1f} min")

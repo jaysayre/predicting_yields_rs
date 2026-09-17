@@ -1,5 +1,7 @@
 ### 02_clean_siap_monthly.mk
-# Clean SIAP monthly production data
+# Clean SIAP monthly production data. Steps:
+#   1_CleanSIAPMonthlydata.ipynb          scraped csvs -> mnthly_siap.dta
+#   2_plot_maize_monthly_harvesting.py    appendix harvest-calendar figure
 SHELL := /bin/bash   # 'source' for conda activation needs bash, not dash
 
 CODE_DIR := $(PROJ_DIR)/Code
@@ -16,5 +18,5 @@ $(SIAP_OUT)/mnthly_siap.dta: $(TASK_DIR)/1_CleanSIAPMonthlydata.ipynb
 
 # Monthly harvest-share figure (paper appendix; also used by the PAP/older
 # body files). Rebuilt from the cleaned monthly panel.
-$(PLOTS_DIR)/maize_monthly_harvesting.png: $(TASK_DIR)/plot_maize_monthly_harvesting.py $(SIAP_OUT)/mnthly_siap.dta
+$(PLOTS_DIR)/maize_monthly_harvesting.png: $(TASK_DIR)/2_plot_maize_monthly_harvesting.py $(SIAP_OUT)/mnthly_siap.dta
 	cd $(DATA_DIR) && $(MPC_ENV) python3 $<

@@ -4,7 +4,7 @@ and the farm (ADC, within-municipality) level. The Agg-NN is best at the
 municipality level (Table \ref{tab:validation_mun}) but worst at the farm level,
 illustrating why aggregate metrics mislead for downscaling.
 
-Municipality-level R^2 from Table 1 (held-out municipalities, vs SIAP); farm-level
+Municipality-level R^2 from Table 1 (held-out municipalities, vs DGSIAP); farm-level
 pooled within-municipality R^2 from exante_trust_across_models.csv.
 
 Output: plots/coauthor_extras_paper/fig_ranking_inversion.pdf (pgf/Times)
@@ -53,10 +53,10 @@ out  = os.path.join(proj, "plots", "coauthor_extras_paper")
 
 # Municipality-level R^2 (Table 1, standardized: all models trained with the
 # held-out municipalities excluded, scored on the common N=3,571 held-out
-# mun-years; from validation_mun_level.py, full 2017-2024 masked panel).
+# mun-years; from 4_validation_mun_level.py, full 2017-2024 masked panel).
 # Farm-level within-R^2 loaded from the CSV.
-MUN = {"Agg-NN": 0.790, "AEF mean": 0.579, "AEF Hist Ens.": 0.627,
-       "AEF Hist": 0.611, "NDVI": 0.534}
+MUN = {"Agg-NN": 0.790, "AEF mean": 0.520, "AEF Hist Ens.": 0.627,
+       "AEF Hist": 0.608, "NDVI": 0.534}
 cm = pd.read_csv(os.path.join(out, "exante_trust_across_models.csv"))
 FARM = dict(zip(cm["model"], cm["pooled_within_r2"]))
 # AEF RF in Table 1 == the AEF standard model in the within table
@@ -85,7 +85,7 @@ ax.set_ylim(6.6, 0.4)               # rank 1 at top
 ax.set_yticks(range(1, 7)); ax.set_yticklabels([f"{r}" for r in range(1, 7)])
 ax.set_ylabel("rank (1 = best)")
 ax.set_xticks([x0, x1])
-ax.set_xticklabels(["Municipality level\n($R^2$ vs SIAP, Table 1)",
+ax.set_xticklabels(["Municipality level\n($R^2$ vs DGSIAP)",
                     "Farm level\n(within-municipality $R^2$)"], fontsize=10.5)
 ax.set_title("The model ranking inverts from the municipality to the farm level\n"
              "(the Agg-NN is best at the aggregate, worst at the disaggregate)",

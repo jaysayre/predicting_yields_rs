@@ -23,7 +23,8 @@ improvement_plan.md
 WITHIN_MUN_R2_PLAN.md
 RF_validation_results.md
 Code/
-├── pipeline.mk              # Master orchestration (stages 3–5)
+├── pipeline.mk              # Master orchestration (build / train / analysis)
+├── envs/                    # conda environment specs (geo_env, ml_env; *_pinned for exact versions)
 ├── build/                    # Data cleaning & boundary assembly
 │   ├── 01_scrape_siap/
 │   ├── 02_clean_siap_monthly/
@@ -35,8 +36,7 @@ Code/
 │   ├── 01_extract_embeddings/       # AEF embeddings (Earth Engine)
 │   ├── 02_extract_ndvi_histograms/  # Landsat NDVI histograms (Earth Engine)
 │   ├── 03_train_rf_gb/              # AEF → RF/GB models
-│   ├── 04_train_cnn/                # NDVI histogram → CNN models
-│   └── 05_train_agg_nn/             # AEF → aggregation-constrained NN
+│   └── 04_train_agg_nn/             # AEF → aggregation-constrained NN
 └── analysis/                 # Corrections, evaluation, paper outputs
     ├── 01_corrections/
     ├── 02_accuracy_maize/

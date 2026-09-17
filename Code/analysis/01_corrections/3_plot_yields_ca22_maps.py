@@ -14,8 +14,9 @@ and the maps depict exactly the units the paper's results are computed on.
 
 Prediction maps use the paper's best specification: **AEF Hist Ens. with
 within-municipality shrinkage** (combined-season R2 0.598, within-R2 0.225).
-Shrinkage lambda is estimated exactly as in 4_accuracy_main_2022.py (GroupKFold
-over municipalities), so the mapped surface matches the Shrink table rows.
+Shrinkage uses the deployed public point estimate lambda = 0.72 (Sec 3.6),
+the same value as 4_accuracy_main_2022.py, so the mapped surface matches the
+Shrink table rows.
 
 Outputs (to Maize_prediction/plots/) — filenames preserved from the CA07 versions
 so they are drop-in replacements for the Overleaf figures, EXCEPT the municipal
@@ -121,7 +122,7 @@ def load_values():
     ens =  pd.read_parquet(ens_path)[["adc", "muncode", "yield", "pred"]].copy()
     ens["adc"] =  ens["adc"].astype(str)
     ens["muncode"] =  ens["muncode"].astype(str).str.zfill(5)
-    lam =  0.74   # deployed public point estimate (Sec 3.6)
+    lam =  0.72   # deployed public point estimate (Sec 3.6)
     ens["pred_shrink"] =  shrink(ens, "pred", lam)
     print(f"[2] AEF Hist Ens. shrinkage lambda = {lam:.3f}")
 

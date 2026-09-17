@@ -51,11 +51,11 @@ print(f"Composite features (signed, equal weight): {SIGNS}")
 
 # ── VALIDATION ONLY: does the unsupervised index order realized skill? ──
 # Realized skill is that of the DEPLOYED specification: AEF Hist Ens. Shrink
-# (lambda = 0.74, Sec 3.6), matching Figure exante_targeting (2026-08-28).
+# (lambda = 0.72, Sec 3.6), matching Figure exante_targeting (2026-08-28).
 ev = pd.read_parquet(os.path.join(P, "adc_aef_hist_ens_eval.parquet"))
 ev = ev[["adc", "muncode", "yield", "pred"]].dropna(subset=["yield", "pred"]).copy()
 ev["muncode"] = ev["muncode"].astype(str).str.zfill(5)
-LAM = 0.74
+LAM = 0.72
 _g = ev.groupby("muncode")["pred"]
 ev["pred"] = _g.transform("mean") + LAM * (ev["pred"] - _g.transform("mean"))
 

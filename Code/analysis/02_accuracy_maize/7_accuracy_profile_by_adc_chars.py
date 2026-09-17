@@ -1,7 +1,7 @@
 """
 Profile AEF Hist Ensemble accuracy by ADC characteristics.
 
-Trains the maize AEF Hist Ensemble (same config as gb_aef_hist_ensemble.py),
+Trains the maize AEF Hist Ensemble (same config as 2_gb_aef_hist_ensemble.py),
 generates ADC-level predictions for 2022, and computes accuracy metrics
 stratified by:
   1. Maize planted area (land_input) terciles
@@ -25,11 +25,11 @@ sys.stdout.reconfigure(line_buffering=True)
 
 
 # ============================================================
-# CONFIGURATION  (must match gb_aef_hist_ensemble.py)
+# CONFIGURATION  (must match 2_gb_aef_hist_ensemble.py)
 # ============================================================
 N_PIX       =  2
 K_SAMP      =  5
-W_BIN       =  0.4
+W_BIN       =  0.5
 EVAL_YEAR   =  2022
 CROP        =  'Maize'
 SEASON      =  'Spring-Summer'
@@ -136,7 +136,7 @@ def subsample_bins(train_df, bin_cols, K, N, seed=42):
 # ============================================================
 t0 = time.time()
 
-# -- 1. Load & train (same as gb_aef_hist_ensemble.py) -------
+# -- 1. Load & train (same as 2_gb_aef_hist_ensemble.py) -------
 print("Loading data...")
 mun_bh   =  pd.read_parquet(os.path.join(aef_dir, "alpha_earth_mex_mun_binned_hist.parquet"))
 bin_cols  =  sorted([c for c in mun_bh.columns if '_b' in c and c.startswith('A')])
@@ -215,7 +215,7 @@ adc_combo = adc_bh.merge(
 # every ADC but leave values null where the ESA WorldCover cropland mask found
 # no pixels. fillna(0) below would otherwise turn those into all-zero vectors
 # and emit a constant prediction. Matches the identical drop in
-# gb_aef_hist_ensemble.py, so the profile sample equals the main-table sample.
+# 2_gb_aef_hist_ensemble.py, so the profile sample equals the main-table sample.
 _bin_null =  adc_combo[bin_cols].isna().all(axis=1)
 _pct_null =  adc_combo[pct_cols].isna().all(axis=1)
 print(f"  dropping {int((_bin_null | _pct_null).sum()):,} ADCs with no cropland "

@@ -2,11 +2,11 @@
 Profile CIMMYT plot-level AEF Hist Ensemble predictions.
 
 Investigates which subsets of CIMMYT plots have better/worse predictions,
-profiling by: state, year, yield level, proximity to SIAP municipal mean,
+profiling by: state, year, yield level, proximity to DGSIAP municipal mean,
 number of plots per municipality, and CIMMYT management characteristics.
 
 Prerequisites: (superseded dep/accuracy_cimmyt_plot_level.py; at least have
-the three CIMMYT parquets and SIAP data available).
+the three CIMMYT parquets and DGSIAP data available).
 
 Usage:
   source /usr/local/anaconda3/etc/profile.d/conda.sh && conda activate mpc_env
@@ -27,7 +27,7 @@ sys.stdout.reconfigure(line_buffering=True)
 # ============================================================
 N_PIX       =  2
 K_SAMP      =  5
-W_BIN       =  0.4
+W_BIN       =  0.5
 CROP        =  'Maize'
 SEASON      =  'Spring-Summer'
 MIN_YEAR    =  2017
@@ -207,7 +207,7 @@ cimmyt_combo = cimmyt_bins.merge(
 print(f"  Combined: {len(cimmyt_combo):,} plot-years")
 
 
-# -- 2. Train ensemble on mun-level SIAP data ----------------
+# -- 2. Train ensemble on mun-level DGSIAP data ----------------
 print("\nLoading training data...")
 mun_bh   =  pd.read_parquet(os.path.join(aef_dir, "alpha_earth_mex_mun_binned_hist.parquet"))
 bin_cols  =  sorted([c for c in mun_bh.columns if '_b' in c and c.startswith('A')])
@@ -338,7 +338,7 @@ print(f"  Unique plots:       {df['plot_id'].nunique():,}")
 print(f"  Unique muns:        {df['muncode'].nunique():,}")
 
 
-# -- 5. Add SIAP municipal yields for comparison -------------
+# -- 5. Add DGSIAP municipal yields for comparison -------------
 siap_mun = siap[
     (siap['name'] == CROP)
     & (siap['growing_season'] == SEASON)
@@ -353,8 +353,8 @@ df = df.merge(siap_mun, on=['muncode', 'year'], how='left')
 df['yield_gap'] = df['yield_cimmyt'] - df['yield_siap']
 df['abs_yield_gap'] = df['yield_gap'].abs()
 
-print(f"  Plots with SIAP match: {df['yield_siap'].notna().sum():,}")
-print(f"  Mean SIAP yield:       {df['yield_siap'].mean():.2f} t/ha")
+print(f"  Plots with DGSIAP match: {df['yield_siap'].notna().sum():,}")
+print(f"  Mean DGSIAP yield:       {df['yield_siap'].mean():.2f} t/ha")
 print(f"  Mean CIMMYT yield:     {df['yield_cimmyt'].mean():.2f} t/ha")
 print(f"  Mean predicted:        {df['pred'].mean():.2f} t/ha")
 
@@ -409,12 +409,12 @@ try:
 except Exception as e:
     print(f"  Could not create terciles: {e}")
 
-# --- 6e. By proximity to SIAP mun yield ---
-print("\n--- By proximity to SIAP municipal yield ---")
+# --- 6e. By proximity to DGSIAP mun yield ---
+print("\n--- By proximity to DGSIAP municipal yield ---")
 print_header()
 has_siap = df[df['yield_siap'].notna()].copy()
 if len(has_siap) > 100:
-    # Ratio of CIMMYT to SIAP yield
+    # Ratio of CIMMYT to DGSIAP yield
     has_siap['ratio'] = has_siap['yield_cimmyt'] / has_siap['yield_siap']
     try:
         has_siap['ratio_grp'] = pd.qcut(has_siap['ratio'], 4,
@@ -433,7 +433,7 @@ if len(has_siap) > 100:
                                         duplicates='drop')
         for g in ['Small gap', 'Medium gap', 'Large gap']:
             sub = has_siap[has_siap['gap_grp'] == g]
-            print_row(eval_group(sub, f'{g} (|CIMMYT-SIAP|)'))
+            print_row(eval_group(sub, f'{g} (|CIMMYT-DGSIAP|)'))
     except Exception as e:
         print(f"  Could not create gap groups: {e}")
 
@@ -554,9 +554,9 @@ if len(repeat_df) > 100:
                   f"median={np.median(plot_corrs):.3f}")
 
 
-# --- 6k. Does the prediction track SIAP well? ---
-print("\n--- Does prediction match SIAP municipal yields? ---")
-# Group CIMMYT predictions to municipality level and compare to SIAP
+# --- 6k. Does the prediction track DGSIAP well? ---
+print("\n--- Does prediction match DGSIAP municipal yields? ---")
+# Group CIMMYT predictions to municipality level and compare to DGSIAP
 mun_pred = df.groupby(['muncode', 'year']).agg(
     mean_pred=('pred', 'mean'),
     mean_cimmyt=('yield_cimmyt', 'mean'),
@@ -567,19 +567,19 @@ if len(mun_pred) > 20:
     c1 = np.corrcoef(mun_pred['mean_pred'].values, mun_pred['yield_siap'].values)[0, 1]
     c2 = np.corrcoef(mun_pred['mean_cimmyt'].values, mun_pred['yield_siap'].values)[0, 1]
     c3 = np.corrcoef(mun_pred['mean_pred'].values, mun_pred['mean_cimmyt'].values)[0, 1]
-    print(f"  Mun-level: pred vs SIAP r={c1:.3f}, "
-          f"CIMMYT vs SIAP r={c2:.3f}, "
+    print(f"  Mun-level: pred vs DGSIAP r={c1:.3f}, "
+          f"CIMMYT vs DGSIAP r={c2:.3f}, "
           f"pred vs CIMMYT r={c3:.3f}")
     print(f"  N mun-years: {len(mun_pred)}")
-    print(f"  Mean SIAP:   {mun_pred['yield_siap'].mean():.2f}, "
+    print(f"  Mean DGSIAP:   {mun_pred['yield_siap'].mean():.2f}, "
           f"Mean pred: {mun_pred['mean_pred'].mean():.2f}, "
           f"Mean CIMMYT: {mun_pred['mean_cimmyt'].mean():.2f}")
 
-    # R2 of pred vs SIAP at mun level
+    # R2 of pred vs DGSIAP at mun level
     r2_pred_siap = r2(mun_pred['yield_siap'], mun_pred['mean_pred'])
     r2_cimmyt_siap = r2(mun_pred['yield_siap'], mun_pred['mean_cimmyt'])
-    print(f"  R2 pred vs SIAP: {r2_pred_siap:.3f}")
-    print(f"  R2 CIMMYT vs SIAP: {r2_cimmyt_siap:.3f}")
+    print(f"  R2 pred vs DGSIAP: {r2_pred_siap:.3f}")
+    print(f"  R2 CIMMYT vs DGSIAP: {r2_cimmyt_siap:.3f}")
 
 
 # --- 6l. Municipality-level representativeness ---------------
@@ -665,7 +665,7 @@ if len(has_siap2) > 100:
 # 7. WRITE PAPER TABLE (tab:cimmyt_profile)
 # ============================================================
 # Collapsed, honest two-panel table:
-#   Panel A  Plot-level accuracy: ensemble vs a naive SIAP-municipal-mean
+#   Panel A  Plot-level accuracy: ensemble vs a naive DGSIAP-municipal-mean
 #            baseline (zero within-mun skill by construction). The gap in
 #            within-R2 is the model's marginal plot-level skill beyond the
 #            municipal anchor. A cluster-bootstrap CI is attached to it.
@@ -674,7 +674,7 @@ if len(has_siap2) > 100:
 #            the ratio conditions on the ground truth, so band-level R2 is
 #            descriptive (where the model tracks yields) rather than
 #            independent evidence of skill. The municipal-level aggregation
-#            rows (pred vs SIAP 0.598/0.778, CIMMYT vs SIAP 0.723) moved to
+#            rows (pred vs DGSIAP 0.598/0.778, CIMMYT vs DGSIAP 0.723) moved to
 #            prose; they are still printed above.
 print(f"\n{'='*110}")
 print("WRITING PAPER TABLE (tab:cimmyt_profile)")
@@ -692,16 +692,22 @@ _ens = eval_group(_tbl, 'AEF Hist Ensemble', ycol='yield_cimmyt', pcol='pred')
 # Shrink row: within-municipality shrinkage exactly as deployed in the ADC
 # pipeline — a-priori lambda = 2/3 (Sec 3.6), fixed ex-ante with respect to the
 # CIMMYT data. Deviations from the municipality-year mean prediction.
-_LAM_DEPLOY = 0.74
+_LAM_DEPLOY = 0.72
 _gm = _tbl.groupby(['muncode', 'year'])['pred'].transform('mean')
 _tbl['pred_shrink'] = _gm + _LAM_DEPLOY * (_tbl['pred'] - _gm)
 _ens_sh = eval_group(_tbl, 'AEF Hist Ensemble Shrink',
                      ycol='yield_cimmyt', pcol='pred_shrink')
-_hist = eval_group(_tbl, 'AEF Hist', ycol='yield_cimmyt', pcol='pred_pct')
+# 2026-09-17: "AEF Hist" is now the bins-only model (64 dims x 8 fixed-width
+# histogram-bin shares, K=5 subsampled draws of N=2 pixels/dim) -- i.e. the
+# `pred_bin` component of the ensemble. The 448-feature percentile/SD/mean
+# model (`pred_pct`) is no longer reported on its own.
+_hist = eval_group(_tbl, 'AEF Hist', ycol='yield_cimmyt', pcol='pred_bin')
 _mean = eval_group(_tbl, 'AEF mean', ycol='yield_cimmyt', pcol='pred_mean')
-_base = eval_group(_tbl, 'SIAP Mun.\\ Avg.\\ (naive)',
+_base = eval_group(_tbl, 'DGSIAP Mun.\\ Avg.\\ (naive)',
                    ycol='yield_cimmyt', pcol='yield_siap')
 _wtn_lo, _wtn_hi = boot_ci_within(_tbl, 'yield_cimmyt', 'pred', B=N_BOOT)
+print(f"  ensemble within-R2 95% CI (mun-cluster bootstrap): "
+      f"[{_wtn_lo:.3f}, {_wtn_hi:.3f}]")
 
 # Panel B: municipal-level aggregation
 _mun = _tbl.groupby(['muncode', 'year']).agg(
@@ -736,13 +742,13 @@ for _r in [_hist, _mean]:
         _tex += (f"{_r['label']} & {_r['N']:,} & {_fmt(_r['R2'])} & "
                  f"{_fmt(_r['Btw'])} & {_fmt(_r['Wtn'])} & {_fmt(_r['Pearson'])} & "
                  f"{_fmt(_r['Spearman'])} \\\\\n")
-_tex += (f"SIAP Mun.\\ Avg.\\ (naive) & {_base['N']:,} & {_fmt(_base['R2'])} & "
+_tex += (f"DGSIAP Mun.\\ Avg.\\ (naive) & {_base['N']:,} & {_fmt(_base['R2'])} & "
          f"{_fmt(_base['Btw'])} & {_fmt(_base['Wtn'])} & {_fmt(_base['Pearson'])} & "
          f"{_fmt(_base['Spearman'])} \\\\\n")
 _tex += r"""\addlinespace
-\multicolumn{7}{l}{\textit{Panel B: By municipality mean CIMMYT/SIAP ratio (AEF Hist Ens.\ Shrink)}} \\
+\multicolumn{7}{l}{\textit{Panel B: By municipality mean CIMMYT/DGSIAP ratio (AEF Hist Ens.\ Shrink)}} \\
 """
-# Bands defined at the MUNICIPALITY level (mean CIMMYT yield / SIAP yield per
+# Bands defined at the MUNICIPALITY level (mean CIMMYT yield / DGSIAP yield per
 # mun-year), NOT each plot's own ratio: plot-level conditioning selects on the
 # realized outcome and mechanically destroys within-mun R2 (2026-08-28).
 # Evaluated with the deployed Shrink predictions.
@@ -762,7 +768,7 @@ for _lbl, _lo, _hi in _BANDS:
 _tex += r"""\bottomrule
 \end{tabular}
 \par\smallskip
-\footnotesize{Notes: models trained on SIAP municipal Spring--Summer maize yields ("""
+\footnotesize{Notes: models trained on DGSIAP municipal Spring--Summer maize yields ("""
 _tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to plot-level AEF features. CIMMYT yields "
          r"are self-reported; observations outside "
          f"{CLEAN_LO}--{CLEAN_HI}"
@@ -771,16 +777,14 @@ _tex += (f"{MIN_YEAR}--{MAX_YEAR}) and applied to plot-level AEF features. CIMMY
          r"\%, evident data-entry errors) are excluded, and 28\% of matched plot-years "
          r"contain no WorldCover cropland pixels inside the plot polygon (empty features); "
          r"results are insensitive to excluding the latter. Between- and within-$R^2$ use "
-         r"municipality groupings. The naive baseline assigns every plot its SIAP "
+         r"municipality groupings. The naive baseline assigns every plot its DGSIAP "
          r"municipal mean, so its within-$R^2$ is zero by construction; the ensemble's "
          r"within-$R^2 = "
          f"{_ens['Wtn']:.3f}"
-         r"$ [95\% CI "
-         f"{_wtn_lo:.3f}, {_wtn_hi:.3f}"
-         r"] is its marginal plot-level skill beyond the municipal anchor. The Shrink row "
-         r"applies the deployed $\lambda = 0.74$ (Section~\ref{sec:shrink}), estimated from public data and ex ante "
+         r"$ is its marginal plot-level skill beyond the municipal level data alone. The Shrink row "
+         r"applies the deployed $\lambda = 0.72$ (Section~\ref{sec:shrink}), estimated from public data and ex ante "
          r"with respect to the CIMMYT data. Panel B groups plots by their "
-         r"municipality-year's mean CIMMYT-to-SIAP yield ratio, an indicator of how "
+         r"municipality-year's mean CIMMYT-to-DGSIAP yield ratio, an indicator of how "
          r"representative local trial yields are of area averages.}"
          "\n\\end{table}\n")
 

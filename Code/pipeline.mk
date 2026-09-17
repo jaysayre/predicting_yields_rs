@@ -1,14 +1,19 @@
 ### pipeline.mk
-# Master Makefile — Predicting Yields at Scale Using Remote Sensing
+# Master Makefile — Predicting Maize Yields at Large Scale Using Remote Sensing
 # Authors: James Sayre, Joel Ferguson, Kangogo Sogomo
 #
-# Usage:
-#   make -f Code/pipeline.mk build        # Data cleaning & assembly (some steps manual)
-#   make -f Code/pipeline.mk train        # Model training & prediction
-#   make -f Code/pipeline.mk analysis     # Corrections → evaluation → copy to Overleaf
-#   make -f Code/pipeline.mk all          # Full pipeline (stages 3–5)
+# Usage (from the code repo root):
+#   make -f Code/pipeline.mk build        # stage 1: data cleaning & boundary assembly
+#   make -f Code/pipeline.mk train        # stage 2: model training & prediction
+#   make -f Code/pipeline.mk analysis     # stage 3: evaluation -> tables/figures -> copy to Overleaf
+#   make -f Code/pipeline.mk all          # train + analysis
+#   make -f Code/pipeline.mk -n all       # dry run: list what would be (re)built
 #
-# Run from code repo root: ~/Dropbox/Github/predicting_yields_rs/
+# Each numbered task folder has exactly one <folder>.mk with its targets and a
+# step-numbered script list; this file only chains them. Stages that need
+# interactive credentials (Selenium scrape, Earth Engine exports) print their
+# instructions instead of running; everything downstream of the pulled exports
+# is make-driven.
 
 SHELL         := /bin/bash
 # GNU make cannot handle spaces in prerequisite paths, so prefer the space-free
@@ -26,6 +31,7 @@ DATA_DIR      := $(HOME)/Dropbox/Projects/Maize_prediction
 # Auto-detect machine: server (Deloach, /usr/local/anaconda3, envs mpc_env/ML_env)
 # vs laptop (~/miniforge3, envs geo_env/ml_cuda). Override with e.g.
 #   make -f Code/pipeline.mk analysis GEO_ENV_NAME=myenv ML_ENV_NAME=myenv
+# Environment specs: Code/envs/*.yml
 ifneq ($(wildcard /usr/local/anaconda3/etc/profile.d/conda.sh),)
   CONDA_SH     ?= /usr/local/anaconda3/etc/profile.d/conda.sh
   GEO_ENV_NAME ?= mpc_env
@@ -45,101 +51,80 @@ NB_EXEC       = jupyter nbconvert --execute --inplace --ExecutePreprocessor.time
 # ── Overleaf directory ───────────────────────────────────
 OVERLEAF_DIR  := $(HOME)/Dropbox/Overleaf/Predicting Yields at Scale using RS
 
+# Common variables handed to every task makefile
+SUBMAKE_VARS  = PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" ML_ENV="$(ML_ENV)" NB_EXEC="$(NB_EXEC)"
+
 # ═══════════════════════════════════════════════════════════
-# Stage: Build (data cleaning & assembly)
-# Most steps require manual execution (Selenium, Earth Engine)
+# Stage 1: Build (data cleaning & assembly)
 # ═══════════════════════════════════════════════════════════
 
 .PHONY: build build_01 build_02 build_03 build_04 build_05 build_06
 
-build_01:
-	@echo "MANUAL: Run Code/build/01_scrape_siap/ (requires Selenium + Chrome)"
+build_01:   # SIAP monthly production scrape (Selenium + Chrome)
+	$(MAKE) -f $(CODE_DIR)/build/01_scrape_siap/01_scrape_siap.mk $(SUBMAKE_VARS)
 
-build_02: build_01
-	$(MAKE) -f $(CODE_DIR)/build/02_clean_siap_monthly/02_clean_siap_monthly.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" NB_EXEC="$(NB_EXEC)"
+build_02:   # clean the scraped SIAP monthly panel + harvest-calendar figure
+	$(MAKE) -f $(CODE_DIR)/build/02_clean_siap_monthly/02_clean_siap_monthly.mk $(SUBMAKE_VARS)
 
-build_03:
-	$(MAKE) -f $(CODE_DIR)/build/03_assemble_boundaries/03_assemble_boundaries.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" NB_EXEC="$(NB_EXEC)"
+build_03:   # ADC shapefiles, 2022 geostatistical frame, agland masks
+	$(MAKE) -f $(CODE_DIR)/build/03_assemble_boundaries/03_assemble_boundaries.mk $(SUBMAKE_VARS)
 
-build_04: build_03
-	$(MAKE) -f $(CODE_DIR)/build/04_build_correspondence/04_build_correspondence.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" NB_EXEC="$(NB_EXEC)"
+build_04: build_03   # 2007 <-> 2016 ADC correspondence
+	$(MAKE) -f $(CODE_DIR)/build/04_build_correspondence/04_build_correspondence.mk $(SUBMAKE_VARS)
 
-build_05: build_02
-	$(MAKE) -f $(CODE_DIR)/build/05_phenology/05_phenology.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" NB_EXEC="$(NB_EXEC)"
+build_05: build_02   # crop phenology: NDVI peaks vs SIAP planting months
+	$(MAKE) -f $(CODE_DIR)/build/05_phenology/05_phenology.mk $(SUBMAKE_VARS)
 
-build_06:
-	$(MAKE) -f $(CODE_DIR)/build/06_clean_validation/06_clean_validation.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" NB_EXEC="$(NB_EXEC)"
+build_06: build_05   # CIMMYT farmer-plot validation data + EE geometries
+	$(MAKE) -f $(CODE_DIR)/build/06_clean_validation/06_clean_validation.mk $(SUBMAKE_VARS)
 
-build: build_02 build_03 build_04 build_05 build_06
+build: build_02 build_04 build_05 build_06
 
 # ═══════════════════════════════════════════════════════════
-# Stage: Train (model training & prediction)
-# Extraction steps (01, 02) require Earth Engine → manual
+# Stage 2: Train (feature extraction, model training & prediction)
+# Steps 01-02 submit Earth Engine exports (manual); their consolidation
+# targets run once the exports have been pulled from Drive.
 # ═══════════════════════════════════════════════════════════
 
-.PHONY: train train_01 train_02 train_03 train_04 train_04_v2 train_04_temporal train_05
+.PHONY: train train_01 train_02 train_03 train_04
 
-train_01:
-	@echo "MANUAL: Run Code/train/01_extract_embeddings/ (requires Earth Engine auth)"
+train_01:   # AEF embeddings: EE exports (manual) + CSV -> parquet consolidation
+	$(MAKE) -f $(CODE_DIR)/train/01_extract_embeddings/01_extract_embeddings.mk $(SUBMAKE_VARS)
 
-train_02:
-	@echo "MANUAL: Run Code/train/02_extract_ndvi_histograms/ (requires Earth Engine auth)"
-	@echo "  Original:  dep/ls_ndvi_hists.py 0.2 1.0 0.0 12.0 0.0 0.6 32 max"
-	@echo "  Monthly:   ls_monthly_hists.py 32 8"
+train_02:   # Landsat NDVI cropland features for the NDVI (masked) baseline
+	$(MAKE) -f $(CODE_DIR)/train/02_extract_ndvi_histograms/02_extract_ndvi_histograms.mk $(SUBMAKE_VARS)
 
-train_03:
-	$(MAKE) -f $(CODE_DIR)/train/03_train_rf_gb/03_train_rf_gb.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" ML_ENV="$(ML_ENV)"
+train_03:   # AEF mean RF, AEF Hist + AEF Hist Ensemble GB, muni CV, other crops
+	$(MAKE) -f $(CODE_DIR)/train/03_train_rf_gb/03_train_rf_gb.mk $(SUBMAKE_VARS)
 
-train_04:
-	$(MAKE) -f $(CODE_DIR)/train/04_train_cnn/04_train_cnn.mk train_cnn \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" ML_ENV="$(ML_ENV)"
+train_04: train_03   # Agg-NN, holdout retrains, validation table, census-trained retrain
+	$(MAKE) -f $(CODE_DIR)/train/04_train_agg_nn/04_train_agg_nn.mk $(SUBMAKE_VARS)
 
-train_04_v2:
-	$(MAKE) -f $(CODE_DIR)/train/04_train_cnn/04_train_cnn.mk train_cnn_v2 \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" ML_ENV="$(ML_ENV)"
-
-train_04_temporal:
-	$(MAKE) -f $(CODE_DIR)/train/04_train_cnn/04_train_cnn.mk train_temporal_cnn \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" ML_ENV="$(ML_ENV)"
-
-train_05:
-	$(MAKE) -f $(CODE_DIR)/train/05_train_agg_nn/05_train_agg_nn.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" ML_ENV="$(ML_ENV)"
-
-train: train_03 train_05
+train: train_03 train_04
 
 # ═══════════════════════════════════════════════════════════
-# Stage: Analysis (corrections → evaluation → paper outputs)
+# Stage 3: Analysis (corrections -> evaluation -> paper outputs)
 # ═══════════════════════════════════════════════════════════
 
 .PHONY: analysis analysis_01 analysis_02 analysis_03 analysis_04
 
-analysis_01: train_03
-	$(MAKE) -f $(CODE_DIR)/analysis/01_corrections/01_corrections.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" ML_ENV="$(ML_ENV)" NB_EXEC="$(NB_EXEC)"
+analysis_01: train_03   # Figure 1 maps/hexbin, CA22 prediction maps
+	$(MAKE) -f $(CODE_DIR)/analysis/01_corrections/01_corrections.mk $(SUBMAKE_VARS)
 
-analysis_02: analysis_01
-	$(MAKE) -f $(CODE_DIR)/analysis/02_accuracy_maize/02_accuracy_maize.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" ML_ENV="$(ML_ENV)" NB_EXEC="$(NB_EXEC)"
+analysis_02: analysis_01   # every maize table and figure
+	$(MAKE) -f $(CODE_DIR)/analysis/02_accuracy_maize/02_accuracy_maize.mk $(SUBMAKE_VARS)
 
-analysis_03: analysis_01
-	$(MAKE) -f $(CODE_DIR)/analysis/03_accuracy_other_crops/03_accuracy_other_crops.mk \
-		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" MPC_ENV="$(MPC_ENV)" ML_ENV="$(ML_ENV)" NB_EXEC="$(NB_EXEC)"
+analysis_03: analysis_01   # other-crop tables
+	$(MAKE) -f $(CODE_DIR)/analysis/03_accuracy_other_crops/03_accuracy_other_crops.mk $(SUBMAKE_VARS)
 
-analysis_04: analysis_02 analysis_03
+analysis_04: analysis_02 analysis_03   # copy every table and figure into Overleaf
 	$(MAKE) -f $(CODE_DIR)/analysis/04_copy_to_overleaf/04_copy_to_overleaf.mk \
 		PROJ_DIR=$(PROJ_DIR) DATA_DIR="$(DATA_DIR)" OVERLEAF_DIR="$(OVERLEAF_DIR)"
 
 analysis: analysis_04
 
 # ═══════════════════════════════════════════════════════════
-# Full pipeline (stages 3–5)
+# Full pipeline (stages 2-3; stage 1 and the EE exports are run once by hand)
 # ═══════════════════════════════════════════════════════════
 
 .PHONY: all

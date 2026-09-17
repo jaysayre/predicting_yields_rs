@@ -1,7 +1,7 @@
 """
 ee_alpha_earth_quantile_hist.py
 ===============================
-Quantile-bin variant of ee_alpha_earth_binned_hist.py: identical extraction,
+Quantile-bin variant of 6_ee_alpha_earth_binned_hist.py: identical extraction,
 but bin edges are per-dimension equal-mass quantiles over Mexican cropland
 (from ee_aef_quantile_edges.py) instead of fixed-width bins on [-0.8, 0.8].
 End bins are open (-inf, e1) and [e7, +inf) so no pixel falls outside.

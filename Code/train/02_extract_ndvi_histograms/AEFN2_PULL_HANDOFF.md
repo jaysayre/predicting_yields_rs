@@ -5,7 +5,7 @@
 # muni-CV R² and the Overleaf prose (see "What's left" at the bottom).
 
 **Last updated:** 2026-08-15
-**What this tracks:** the `ls_cropland_features.py --tag aefn2` extraction — cropland-masked
+**What this tracks:** the `2_ls_cropland_features.py --tag aefn2` extraction — cropland-masked
 NDVI features (AEF-parity recipe, 150 per-dim feats) that will become the paper's **new
 NDVI baseline**, replacing the unmasked h3 2D-histogram rows.
 
@@ -91,7 +91,7 @@ PY
 ```bash
 cd "~/CalAg Dropbox/Jay Sayre/Github/predicting_yields_rs/Code/train/02_extract_ndvi_histograms"
 # actual path: /home/jdesktop/CalAg\ Dropbox/Jay\ Sayre/Github/predicting_yields_rs/Code/train/02_extract_ndvi_histograms
-TAG=crop_aefn2 ./pull_cropland_csvs.sh
+TAG=crop_aefn2 ./3_pull_cropland_csvs.sh
 ```
 - Traverses Drive duplicate folders (a few min) then fetches by file-ID. Resume-safe.
 - Prints `have / want` at the end. Re-run to backfill rate-limited stragglers.
@@ -130,10 +130,10 @@ find ~/Dropbox/Projects/Maize_prediction/Data/cropland_features/csvs_crop_aefn2 
    `Data/cropland_features/muni_aefn2_masked.parquet` and writes
    `mun_aefn2_masked_gb_kfold_preds.parquet`.
 5. ✅ **Folded to a single "NDVI (masked)" row** in both tables:
-   - `validation_mun_level.py` (Table 1) — one Landsat row from
+   - `4_validation_mun_level.py` (Table 1) — one Landsat row from
      `mun_aefn2_masked_gb_holdout_preds.parquet`, produced by the new
-     `train_ndvi_masked()` in `train_holdout_validation_models.py`
-     (run `python3 train_holdout_validation_models.py masked` to redo just that row).
+     `train_ndvi_masked()` in `3_train_holdout_validation_models.py`
+     (run `python3 3_train_holdout_validation_models.py masked` to redo just that row).
      Result: **N=3,571 R²=0.534 RMSE=1.490**, vs AEF mean 0.579 / AEF Hist 0.611 /
      AEF Hist Ens. 0.627 / Agg-NN 0.812 on the identical held-out sample.
    - `mun_survey_improvement.py` — agg. row now from `adc_aefn2_masked_preds.parquet`,
@@ -185,13 +185,13 @@ find ~/Dropbox/Projects/Maize_prediction/Data/cropland_features/csvs_crop_aefn2 
    | `partial_masked_mun_train_adc_eval.py` | ✅ fixed — `pred_corr` (all szn) + `pred_corr_pv` (S-S) |
    | `matched_mask_vs_unmasked.py` | ✅ fixed — combined target ⇒ all-seasons anchor; re-run done |
    | `harmonic_adc_eval.py` | ✅ fixed — two anchors threaded through `run_set`; summary regenerated |
-   | `gb_aef_hist_ensemble.py` | ✅ fixed — adds `pred_corr_pv`; re-run done |
+   | `2_gb_aef_hist_ensemble.py` | ✅ fixed — adds `pred_corr_pv`; re-run done |
    | `gb_aef_hist_ensemble_dm.py` | ✅ fixed + re-run 2026-08-16 |
    | `gb_aef_hist_ensemble_qbin.py` | ✅ fixed + re-run 2026-08-16 |
-   | `gb_aef_hist_ensemble_other_crops.py` | ✅ already correct — combined target + all-szn anchor, no P-V rows |
+   | `4_gb_aef_hist_ensemble_other_crops.py` | ✅ already correct — combined target + all-szn anchor, no P-V rows |
    | `census_thought_all_models.py`, `mun_agg_hist_ens.py` | ✅ already correct |
 
-   Cross-check that the fix is right: `gb_aef_hist_ensemble.py` and
+   Cross-check that the fix is right: `2_gb_aef_hist_ensemble.py` and
    `accuracy_main_2022.py` are independently-written correction paths and now agree —
    P-V Corr. 0.499 (N=57,701) vs 0.498 (N=57,731); combined Corr. 0.576 both.
    `gb_aef_hist_ensemble_dm.py`'s baseline comparison row reproduces 0.499 / N=57,701
@@ -214,7 +214,7 @@ find ~/Dropbox/Projects/Maize_prediction/Data/cropland_features/csvs_crop_aefn2 
    that old run (features regenerated / different labels). Do NOT read the old-vs-new
    delta as the anchor fix; the new all-5-set run is the reference.
 
-8. ✅ **Separate bug found + fixed 2026-08-16: `gb_aef_hist_ensemble_other_crops.py`
+8. ✅ **Separate bug found + fixed 2026-08-16: `4_gb_aef_hist_ensemble_other_crops.py`
    still had the pre-2026-07-27 `fillna(0)` behaviour.** ADCs with no cropland pixels
    under the WorldCover mask carry all-null features; `fillna(0)` turned them into
    all-zero vectors that got confident near-constant predictions. The main maize script
@@ -243,7 +243,7 @@ find ~/Dropbox/Projects/Maize_prediction/Data/cropland_features/csvs_crop_aefn2 
 
    **Mask coverage by crop** (share of 2022 census ADCs with NO cropland pixels, i.e.
    all-null features and therefore dropped). The AEF extraction masks to WorldCover
-   class **40 (Cropland) only** — `ee_alpha_earth_binned_hist.py`, `wc.eq(40)`:
+   class **40 (Cropland) only** — `6_ee_alpha_earth_binned_hist.py`, `wc.eq(40)`:
 
    | Crop | census ADCs | w/ features | all-null | % lost |
    |---|---|---|---|---|
