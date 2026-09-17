@@ -104,7 +104,13 @@ print their instructions:
    step 2): Earth Engine; `3_pull_cropland_csvs.sh` pulls the exports. The
    full extraction log is in `AEFN2_PULL_HANDOFF.md`.
 
-Everything downstream of the pulled exports is make-driven.
+Every Earth Engine script reads the Google Cloud project to bill from the
+`EE_PROJECT` environment variable (`export EE_PROJECT=<your-project-id>`);
+the pull script takes the same ids in `PROJECTS`. No project ids are hard-coded.
+
+Everything downstream of the pulled exports is make-driven. Notebooks are
+committed without outputs; `make` re-executes them in place, so clear outputs
+(`jupyter nbconvert --clear-output --inplace`) before committing a notebook.
 
 ## Paper outputs
 
