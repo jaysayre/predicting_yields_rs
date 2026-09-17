@@ -7,15 +7,15 @@
 # silently keeps one -> pull BY FILE-ID driven by the SUCCEEDED EE task list.
 #
 # Usage:
-#   TAG=crop_aefn2 ./3_pull_cropland_csvs.sh              # pull the aefn2 run
-#   TAG=crop_aefn2 PROJECTS="yield-predict ..." ./3_pull_cropland_csvs.sh
+#   TAG=crop_aefn2 PROJECTS="<gcp-project-id>" ./3_pull_cropland_csvs.sh   # pull the aefn2 run
+#   TAG=crop_aefn2 PROJECTS="<gcp-project-id> ..." ./3_pull_cropland_csvs.sh
 set -euo pipefail
 
 PY=${PY:-~/miniforge3/envs/geo_env/bin/python}
 REMOTE=${REMOTE:-gdrive}
 TAG=${TAG:-crop_aefn2}                       # desc/folder suffix (MTAG without leading _)
 PREFIX="cropfeat_${TAG}_adc_"                # EE description prefix to match
-PROJECTS=${PROJECTS:-"ds421reproducibilityproject ee-sayrejay poppydetection yield-predict ee-joeldferg ee-kangogosogomo"}
+PROJECTS=${PROJECTS:?set PROJECTS to the space-separated Earth Engine project ids the exports were submitted from}
 DST=${DST:-~/Dropbox/Projects/Maize_prediction/Data/cropland_features/csvs_${TAG}}
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$DST"

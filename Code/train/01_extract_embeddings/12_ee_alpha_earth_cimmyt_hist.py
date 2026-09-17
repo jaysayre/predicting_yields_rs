@@ -28,6 +28,10 @@ import argparse
 from ast import literal_eval
 
 import ee
+EE_PROJECT =  os.environ.get("EE_PROJECT")   # an Earth Engine-enabled Google Cloud project id
+if not EE_PROJECT:
+    raise SystemExit("Set EE_PROJECT=<gcp-project-id> before running this script")
+
 import pandas as pd
 
 
@@ -95,7 +99,7 @@ def main():
     args =  parser.parse_args()
 
     ee.Authenticate()
-    ee.Initialize(project='avocadoyieldsdeforestation')
+    ee.Initialize(project=EE_PROJECT)
 
     alpha_earth =  ee.ImageCollection("GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL")
 

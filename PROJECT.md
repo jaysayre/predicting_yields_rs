@@ -44,7 +44,7 @@ separate, non-versioned project directory.
 
 ```
 ~/Dropbox/Github/predicting_yields_rs/           this repo
-├── README.md  PROJECT.md  CLAUDE.md
+├── README.md  PROJECT.md
 └── Code/
     ├── pipeline.mk            master makefile (build / train / analysis / all)
     ├── envs/                  conda environment specs (geo_env, ml_env; *_pinned = exact versions)

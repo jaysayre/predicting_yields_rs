@@ -23,6 +23,10 @@ import json
 from ast import literal_eval
 
 import ee
+EE_PROJECT =  os.environ.get("EE_PROJECT")   # an Earth Engine-enabled Google Cloud project id
+if not EE_PROJECT:
+    raise SystemExit("Set EE_PROJECT=<gcp-project-id> before running this script")
+
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -47,10 +51,10 @@ out_json  =  os.path.join(proj_dir, "Data", "alpha_earth", "aef_quantile_bin_edg
 feat_names =  [f"A{d:02d}" for d in range(64)]
 
 try:
-    ee.Initialize(project='avocadoyieldsdeforestation')
+    ee.Initialize(project=EE_PROJECT)
 except Exception:
     ee.Authenticate()
-    ee.Initialize(project='avocadoyieldsdeforestation')
+    ee.Initialize(project=EE_PROJECT)
 
 alpha_earth =  ee.ImageCollection("GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL")
 

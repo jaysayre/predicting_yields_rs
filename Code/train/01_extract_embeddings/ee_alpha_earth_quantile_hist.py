@@ -30,6 +30,10 @@ import argparse
 from ast import literal_eval
 
 import ee
+EE_PROJECT =  os.environ.get("EE_PROJECT")   # an Earth Engine-enabled Google Cloud project id
+if not EE_PROJECT:
+    raise SystemExit("Set EE_PROJECT=<gcp-project-id> before running this script")
+
 import pandas as pd
 import geopandas as gpd
 from shapely import to_geojson
@@ -147,10 +151,10 @@ def main():
         edges =  json.load(fh)['edges']
 
     try:
-        ee.Initialize(project='avocadoyieldsdeforestation')
+        ee.Initialize(project=EE_PROJECT)
     except Exception:
         ee.Authenticate()
-        ee.Initialize(project='avocadoyieldsdeforestation')
+        ee.Initialize(project=EE_PROJECT)
 
     alpha_earth =  ee.ImageCollection("GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL")
     out_cols    =  build_out_cols()

@@ -32,7 +32,7 @@ The harmonic fit itself is identical to ls_harmonic_features.py (per-year,
 
 Usage:
   ~/miniforge3/envs/geo_env/bin/python 2_ls_cropland_features.py --level adc \
-      --years 2017-2024 --project yield-predict [--no_mask] [--limit N]
+      --years 2017-2024 --project <gcp-project-id> [--no_mask] [--limit N]
 """
 import os
 import sys
@@ -51,7 +51,8 @@ parser.add_argument('--years', type=str, default='2022')
 parser.add_argument('--harmonics', type=int, default=3)
 parser.add_argument('--start_state', type=str, default='01')
 parser.add_argument('--limit', type=int, default=None)
-parser.add_argument('--project', type=str, default='yield-predict')
+parser.add_argument('--project', type=str, default=os.environ.get('EE_PROJECT'),
+                    help='Earth Engine-enabled Google Cloud project id (or set EE_PROJECT)')
 parser.add_argument('--no_mask', action='store_true',
                     help='skip the cropland mask (unmasked control run)')
 parser.add_argument('--only_adcids', type=str, default=None,

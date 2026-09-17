@@ -29,10 +29,10 @@ The tail was NOT quota-bound and NOT simply slow — it was **queue contention**
 - **`listOperations` ages out old SUCCEEDED tasks**, so the EE task list *undercounts*
   badly (it read 4,516 when Drive held 4,774). **Never** measure progress from it —
   measure from Drive (`rclone lsf` map) or the local file count.
-- 5 of 6 projects were quota-**restricted**; only **`ee-kangogosogomo`** had quota, and
+- 5 of 6 projects were quota-**restricted**; only **`<project-6>`** had quota, and
   its slots were being burned on **406 PENDING duplicates** of batches already on Drive,
   while the 10 genuinely-missing batches (state 32 / 2024) sat parked on the *locked*
-  `poppydetection`. So the queue was busy doing nothing useful.
+  `<project-3>`. So the queue was busy doing nothing useful.
 - Fix: cancel the duplicates, **resubmit the 10 on the unrestricted project**
   (`--states 32 --years 2024 --allow_dup_pending`). Done in ~40 min instead of
   waiting for the Sep 1 reset. Batching is **per-state**, so `--states 32` reproduces
@@ -53,7 +53,7 @@ Local dir: `~/Dropbox/Projects/Maize_prediction/Data/cropland_features/csvs_crop
 Original diagnosis: bottleneck is **per-USER Earth Engine concurrency (~1 slot)**, NOT
 quota; a 40-min monitor showed fresh projects' tasks never getting scheduled. That held
 while all queues were James's. It turned out to be **incomplete**: once
-`ee-kangogosogomo` (a different person's account, hence its own concurrency) was in play
+`<project-6>` (a different person's account, hence its own concurrency) was in play
 it sustained 4–5 concurrent — but spent them on duplicate work. See "How the last 211
 actually got done".
 
@@ -66,7 +66,7 @@ actually got done".
 ~/miniforge3/envs/geo_env/bin/python - <<'PY'
 import ee, warnings; warnings.filterwarnings('ignore')
 from collections import Counter
-projects = "ds421reproducibilityproject ee-sayrejay poppydetection yield-predict ee-joeldferg ee-kangogosogomo".split()
+projects = "<project-1> <project-2> <project-3> <project-4> <project-5> <project-6>".split()
 succ=set(); running=0; pending=0; run_proj=Counter(); done_day=Counter()
 for p in projects:
     try: ee.Initialize(project=p)
@@ -95,7 +95,7 @@ TAG=crop_aefn2 ./3_pull_cropland_csvs.sh
 ```
 - Traverses Drive duplicate folders (a few min) then fetches by file-ID. Resume-safe.
 - Prints `have / want` at the end. Re-run to backfill rate-limited stragglers.
-- Default PROJECTS list already includes `ee-joeldferg ee-kangogosogomo`.
+- Default PROJECTS list already includes `<project-5> <project-6>`.
 
 ### 3. Count local
 ```bash

@@ -30,6 +30,10 @@ os.environ.setdefault("PROJ_LIB", os.path.join(
     os.path.expanduser("~"), "miniforge3", "envs", "geo_env", "share", "proj"))
 
 import ee
+EE_PROJECT =  os.environ.get("EE_PROJECT")   # an Earth Engine-enabled Google Cloud project id
+if not EE_PROJECT:
+    raise SystemExit("Set EE_PROJECT=<gcp-project-id> before running this script")
+
 import numpy as np
 import geopandas as gpd
 
@@ -50,7 +54,7 @@ MUNS = {
     "03001": ("Comondu, BCS",                  "high", 6.87),
 }
 
-ee.Initialize(project="avocadoyieldsdeforestation")
+ee.Initialize(project=EE_PROJECT)
 
 shp  =  gpd.read_file(shp_path).to_crs("EPSG:4326")   # source is Lambert (m); EE needs lon/lat
 shp["muncode"] =  shp["CVE_ENT"].astype(str).str.zfill(2) + shp["CVE_MUN"].astype(str).str.zfill(3)

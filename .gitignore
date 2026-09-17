@@ -2,7 +2,6 @@
 *.md
 !README.md
 !PROJECT.md
-!CLAUDE.md
 !Code/train/02_extract_ndvi_histograms/AEFN2_PULL_HANDOFF.md
 __pycache__/
 *.pyc

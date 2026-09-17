@@ -4,7 +4,6 @@ Set MODE below to select which variant to run.
 
 Modes:
   "mexico_maize"      - Mexico mun-level maize yields, RF or GB (IMPROVED toggle)
-  "california"        - CA county-level multi-crop RF
   "mexico_multi_crop" - Mexico mun-level multi-crop RF, predict on ADCs
 """
 import os
@@ -17,7 +16,7 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 # ============================================================
 # CONFIGURATION — set MODE to control which variant runs
 # ============================================================
-MODE     =  "mexico_maize"  # options: mexico_maize, california, mexico_multi_crop
+MODE     =  "mexico_maize"  # options: mexico_maize, mexico_multi_crop
 IMPROVED =  False  # mexico_maize and mexico_multi_crop: False = RF, True = GB
 # ============================================================
 
@@ -146,112 +145,6 @@ def run_mexico_maize():
 
     adc_df[['adcid', 'year', 'yield_pred']].to_parquet("predictions/adc_alpha_earth_preds_maize.parquet", index=False)
     print(f"Saved {len(adc_df):,} predictions to predictions/adc_alpha_earth_preds_maize.parquet")
-
-
-def run_california():
-    """CA county-level multi-crop RF (from RF_california.ipynb)."""
-
-    # Load AEF features
-    ae_dir      =  'alpha_earth_ca_county'
-    ae_fs       =  [f for f in os.listdir(ae_dir) if f.endswith('.csv')]
-    alpha_earth =  pd.concat([pd.read_csv(os.path.join(ae_dir, f)) for f in ae_fs])
-    print(f"AEF data: {alpha_earth.shape}")
-    print(f"Crops: {alpha_earth['crop'].unique()}")
-    print(f"Years: {sorted(alpha_earth['year'].unique())}")
-
-    # Load cleaned county yields
-    yields_path =  '/home/jsayre/Dropbox/Projects/Avocado_Project/Data/County_Ag_Commisioner_CA/cleaned_county_yields.parquet'
-    yields      =  pd.read_parquet(yields_path)
-    print(f"Yields shape: {yields.shape}")
-
-    # Standardize county names for merge
-    yields['county']      =  yields['county'].str.strip().str.title()
-    alpha_earth['county'] =  alpha_earth['county'].str.strip().str.title()
-
-    merged =  pd.merge(
-        alpha_earth,
-        yields[['year', 'county', 'crop', 'yield', 'harvested_acres']],
-        on=['year', 'county', 'crop'],
-        how='inner'
-    )
-    merged =  merged[merged['yield'].notna() & (merged['yield'] > 0)]
-    print(f"Merged shape: {merged.shape}")
-    for crop in merged['crop'].unique():
-        n =  (merged['crop'] == crop).sum()
-        print(f"  {crop}: {n} obs")
-
-    # Train RF models per crop
-    results =  {}
-
-    for crop in merged['crop'].unique():
-        print(f"\n{'='*60}")
-        print(f"Training RF for: {crop}")
-        print(f"{'='*60}")
-
-        crop_data =  merged[merged['crop'] == crop].copy()
-
-        if len(crop_data) < 50:
-            print(f"Skipping {crop}: only {len(crop_data)} observations")
-            continue
-
-        n_train   =  int(len(crop_data) * 0.8)
-        train_idx =  np.random.choice(crop_data.index, n_train, replace=False)
-        X_train   =  crop_data.loc[crop_data.index.isin(train_idx), embed_cols].to_numpy()
-        Y_train   =  crop_data.loc[crop_data.index.isin(train_idx), 'yield'].to_numpy()
-        X_val     =  crop_data.loc[~crop_data.index.isin(train_idx), embed_cols].to_numpy()
-        Y_val     =  crop_data.loc[~crop_data.index.isin(train_idx), 'yield'].to_numpy()
-
-        best_r2 =  -np.inf
-        best_d  =  None
-        for d in [1, 5, 10, 20, 50, 100, None]:
-            rf     =  RandomForestRegressor(max_depth=d)
-            rf.fit(X_train, Y_train)
-            Y_hat  =  rf.predict(X_val)
-            ss_res =  np.mean((Y_val - Y_hat)**2)
-            ss_tot =  np.mean((Y_val - np.mean(Y_val))**2)
-            r2     =  1 - ss_res / ss_tot if ss_tot > 0 else 0
-            rmse   =  np.sqrt(ss_res)
-            print(f"  max_depth={str(d):>4s}  R2={r2:.4f}  RMSE={rmse:.4f}")
-            if r2 > best_r2:
-                best_r2   =  r2
-                best_d    =  d
-                best_rmse =  rmse
-
-        print(f"  Best: max_depth={best_d}, R2={best_r2:.4f}, RMSE={best_rmse:.4f}")
-
-        X_all    =  crop_data[embed_cols].to_numpy()
-        Y_all    =  crop_data['yield'].to_numpy()
-        rf_final =  RandomForestRegressor(max_depth=best_d)
-        rf_final.fit(X_all, Y_all)
-
-        results[crop] =  {
-            'model':     rf_final,
-            'best_d':    best_d,
-            'best_r2':   best_r2,
-            'best_rmse': best_rmse,
-            'n_obs':     len(crop_data),
-        }
-
-    # Summary
-    print(f"\n{'Crop':<12s} {'N obs':>8s} {'Best depth':>12s} {'Val R2':>8s} {'Val RMSE':>10s}")
-    print('-' * 54)
-    for crop, res in results.items():
-        print(f"{crop:<12s} {res['n_obs']:>8d} {str(res['best_d']):>12s} {res['best_r2']:>8.4f} {res['best_rmse']:>10.4f}")
-
-    # Predict yields for all county-crop-year combinations
-    pred_dfs =  []
-    for crop, res in results.items():
-        crop_ae =  alpha_earth[alpha_earth['crop'] == crop].copy()
-        if len(crop_ae) == 0:
-            continue
-        crop_ae['yield_pred'] =  res['model'].predict(crop_ae[embed_cols].to_numpy())
-        pred_dfs.append(crop_ae[['county', 'crop', 'year', 'yield_pred']])
-
-    if pred_dfs:
-        all_preds =  pd.concat(pred_dfs, ignore_index=True)
-        out_path  =  os.path.join('predictions', 'ca_yield_predictions.parquet')
-        all_preds.to_parquet(out_path, index=False)
-        print(f"Saved {len(all_preds)} predictions to {out_path}")
 
 
 def run_mexico_multi_crop():
@@ -418,7 +311,6 @@ def run_mexico_multi_crop():
 if __name__ == '__main__':
     modes =  {
         'mexico_maize':      run_mexico_maize,
-        'california':        run_california,
         'mexico_multi_crop': run_mexico_multi_crop,
     }
     if MODE not in modes:
