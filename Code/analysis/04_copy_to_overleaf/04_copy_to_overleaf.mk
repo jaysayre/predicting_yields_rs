@@ -44,7 +44,7 @@ copy_to_overleaf:
 	cp "$(PLOTS_DIR)/maizeyield_mun.png"                  "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/maizeyield_adc.png"                  "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/maizeyield_adc_mun_diff.png"         "$(FIG_DIR)/"
-	cp "$(PLOTS_DIR)/maize_monthly_harvesting.png"        "$(FIG_DIR)/"
+	cp "$(PLOTS_DIR)/maize_monthly_harvesting.pdf"        "$(FIG_DIR)/"
 	# 2026-08: municipal SIAP/pred pair regenerated on CA22 -> _2022 suffix
 	cp "$(PLOTS_DIR)/maizeyield_mun_siap_allmx_2022.png"  "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/maizeyield_mun_pred_allmx_2022.png"  "$(FIG_DIR)/"
