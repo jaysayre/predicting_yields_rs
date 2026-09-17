@@ -272,7 +272,7 @@ for s in axc.spines.values():
 # 2  Featurization
 # ------------------------------------------------------------
 box(X[1], BY, W, BH_, "Featurization")
-txt(X[1] + 0.10, CTOP, "8 bins per\ndimension:\n512 features")
+txt(X[1] + 0.10, CTOP, "Weighted\nhistogram and\nquantile\naggregation")
 axb =  fig.add_axes(rect(X[1] + 0.22, 1.98, W - 0.40, 0.62))
 axb.bar(np.arange(N_BINS), fp[DIM], width=0.72, color=ACCENT)
 axb.set_ylim(0, max(fp[DIM]) * 1.15); clean(axb)
@@ -283,13 +283,13 @@ clean(axh)
 for s in axh.spines.values():
     s.set_visible(True); s.set_color("#B0B0B0"); s.set_linewidth(0.6)
 arrow(X[1] + W / 2, 1.94, X[1] + W / 2, 1.70, color=MUTED, lw=1.1, ms=11)
-txt(X[1] + 0.10, 1.02, "Gradient\nboosting on\nmunicipal\nyields")
+txt(X[1] + 0.10, 1.02, "Gradient\nboosting on\nstandardized\nfeatures")
 
 # ------------------------------------------------------------
 # 3  Scale transfer
 # ------------------------------------------------------------
 box(X[2], BY, W, BH_, "Scale transfer")
-txt(X[2] + 0.10, CTOP, "Same model at\nevery scale:\n95,000 census\nunits (ADCs)")
+txt(X[2] + 0.10, CTOP, "Same model at\nevery scale:\nadmin-2,\nadmin-4,\nplot level")
 mw, mh, my =  0.60, 1.05, 0.95
 mx =  [X[2] + 0.06, X[2] + W - 0.06 - mw]
 ax1 =  fig.add_axes(rect(mx[0], my, mw, mh))
@@ -301,8 +301,6 @@ adcs.plot(ax=ax2, column="pred", cmap=yld_cmap, norm=pnorm, edgecolor="white",
           linewidth=0.12, missing_kwds={"color": "#E8E8E8"}, rasterized=True)
 ax2.set_aspect("equal"); clean(ax2)
 arrow(mx[0] + mw + 0.02, my + mh / 2, mx[1] - 0.02, my + mh / 2, color=MUTED, lw=1.1, ms=11)
-txt(X[2] + W / 2, my - 0.08, "Guanajuato\n" r"$\rightarrow$ P\'{e}njamo ADCs", ha="center",
-    color=MUTED)
 
 # ------------------------------------------------------------
 # 4  Ex-post corrections
@@ -339,7 +337,7 @@ gax2.text(0.36, 1.02, r"$\times\,\lambda$", ha="center", va="top", fontsize=FS, 
 # 5  Validation (three panels of the combined-season accuracy figure)
 # ------------------------------------------------------------
 box(X[4], BY, WR, BH_, "Validation")
-PW, PG, PX0, PY =  0.70, 0.36, X[4] + 0.45, 1.70
+PW, PG, PX0, PY =  0.70, 0.36, X[4] + 0.45, 1.52
 for k, (c, lab, ov, wt) in enumerate(panels):
     px =  PX0 + k * (PW + PG)
     ax =  fig.add_axes(rect(px, PY, PW, PW))
@@ -360,8 +358,12 @@ for k, (c, lab, ov, wt) in enumerate(panels):
 txt(X[4] + 0.10, PY + PW / 2, "predicted (t/ha)", rotation=90, ha="center", va="center",
     color=MUTED)
 txt(PX0 + (3 * PW + 2 * PG) / 2, PY - 0.44, "reported yield (t/ha)", ha="center", color=MUTED)
-txt(X[4] + 0.18, PY - 0.80, "Restricted 2022 agricultural\ncensus microdata, ADC level",
+txt(X[4] + 0.18, PY - 0.80, "Agricultural census microdata\n(admin-4) and plot-level data",
     color=GRAY)
+# role labels above the panel titles: the headline model vs the two reference rows
+LY =  PY + PW + 0.94 + 0.10
+txt(PX0 + PW / 2, LY, "Headline", ha="center", va="bottom", color=GRAY, fontweight="bold")
+txt(PX0 + 1.5 * (PW + PG) + PW / 2, LY, "Reference", ha="center", va="bottom", color=GRAY, fontweight="bold")
 
 # ------------------------------------------------------------
 os.makedirs(plot_dir, exist_ok=True)
