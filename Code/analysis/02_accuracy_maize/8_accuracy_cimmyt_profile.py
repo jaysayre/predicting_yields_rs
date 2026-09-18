@@ -723,7 +723,7 @@ _drop_pct = 100 * (1 - len(cy) / _n_pre_clean)
 
 _tex = r"""\begin{table}[!htbp]
 \centering
-\caption{AEF Hist Ensemble predictions evaluated against CIMMYT plot-level maize yields, 2017--2022} \label{tab:cimmyt_profile}
+\caption{Predictions evaluated against CIMMYT plot-level maize yields, 2017--2022} \label{tab:cimmyt_profile}
 \footnotesize
 \begin{tabular}{lrrrrrr}
 \toprule

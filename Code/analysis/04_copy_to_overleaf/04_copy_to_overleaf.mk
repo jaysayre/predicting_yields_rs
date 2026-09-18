@@ -50,7 +50,7 @@ copy_to_overleaf:
 	cp "$(PLOTS_DIR)/maizeyield_mun_pred_allmx_2022.png"  "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/maizeyield_adc_truth_2022_matched.png"  "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/maizeyield_adc_preds_2022_matched.png"  "$(FIG_DIR)/"
-	cp "$(PLOTS_DIR)/maizeyield_adc_pred_error_prederror_ls_noleg.png"     "$(FIG_DIR)/"
+	cp "$(PLOTS_DIR)/maizeyield_adc_pred_error_prederror_raw_noleg.png"    "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/maizeyield_adc_pred_error_prederror_rcpred_noleg.png" "$(FIG_DIR)/"
 	cp "$(PLOTS_DIR)/maizeyield_adc_pred_error_prederror_munyield.png"     "$(FIG_DIR)/"
 	@echo "Done — all tables and figures copied to Overleaf."

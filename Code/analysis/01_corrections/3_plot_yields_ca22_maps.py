@@ -28,7 +28,7 @@ ADC predictions cover). Those two need a one-line \\includegraphics update each.
   maizeyield_allmx_adc_with_legend.png       "  with colourbar
   maizeyield_adc.png                       CA22 ADC yield, Oaxaca inset
   maizeyield_adc_preds.png                 AEF Hist Ens. Shrink predictions
-  maizeyield_adc_pred_error_prederror_ls_noleg.png      NDVI error
+  maizeyield_adc_pred_error_prederror_raw_noleg.png     AEF Hist Ens. raw error
   maizeyield_adc_pred_error_prederror_rcpred_noleg.png  AEF Shrink error  <- best
   maizeyield_adc_pred_error_prederror_munyield.png      SIAP muni-average error
   maizeyield_mun_allmx.png                 CA22 municipal yield, national   (--census-maps only)
@@ -140,6 +140,7 @@ def load_values():
     df =  (gt.merge(ens[["adc", "pred", "pred_shrink"]], on="adc", how="left")
              .merge(ndvi, on="adc", how="left")
              .merge(siap_mun[["muncode", "siap_yield"]], on="muncode", how="left"))
+    df["err_raw"]    =  df["pred"]         - df["yield"]
     df["err_shrink"] =  df["pred_shrink"]  - df["yield"]
     df["err_ndvi"]   =  df["pred_ndvi"]    - df["yield"]
     df["err_siap"]   =  df["siap_yield"]   - df["yield"]
@@ -230,7 +231,7 @@ def main():
     # ── Prediction-error maps ────────────────────────────
     print("[6] error maps")
     ERR =  dict(vmin=-4, vmax=4, cmap="RdBu_r")
-    base_map(adc, "err_ndvi",   "maizeyield_adc_pred_error_prederror_ls_noleg.png",     **ERR)
+    base_map(adc, "err_raw",    "maizeyield_adc_pred_error_prederror_raw_noleg.png",    **ERR)
     base_map(adc, "err_shrink", "maizeyield_adc_pred_error_prederror_rcpred_noleg.png", **ERR)
     base_map(adc, "err_siap",   "maizeyield_adc_pred_error_prederror_munyield.png",     legend=True, **ERR)
 
